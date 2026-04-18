@@ -1,0 +1,67 @@
+<!-- Shared sidebar partial — included via JS or copy-paste into each page -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">M</div>
+    <span class="logo-text">MangaHub</span>
+  </div>
+
+  <div style="flex:1;overflow-y:auto;padding-bottom:8px;">
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Main</div>
+      <div class="nav-item" data-href="/dashboard">
+        <span class="nav-icon">🏠</span> Dashboard
+      </div>
+      <div class="nav-item" data-href="/browse">
+        <span class="nav-icon">🔍</span> Browse
+      </div>
+      <div class="nav-item" data-href="/library">
+        <span class="nav-icon">📚</span> My Library
+      </div>
+      <div class="nav-item" data-href="/history">
+        <span class="nav-icon">🕐</span> History
+      </div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Community</div>
+      <div class="nav-item" data-href="/chat">
+        <span class="nav-icon">💬</span> Chat
+      </div>
+      <div class="nav-item" data-href="/notifications">
+        <span class="nav-icon">🔔</span> Notifications
+        <span class="nav-badge notif-badge hidden">0</span>
+      </div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Account</div>
+      <div class="nav-item" data-href="/stats">
+        <span class="nav-icon">📊</span> Statistics
+      </div>
+      <div class="nav-item" data-href="/settings">
+        <span class="nav-icon">⚙️</span> Settings
+      </div>
+      <div class="nav-item" data-href="/admin">
+        <span class="nav-icon">🛡️</span> Admin
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="user-info" onclick="location.href='/settings'">
+      <div class="user-avatar" data-user-avatar></div>
+      <div>
+        <div class="user-name" data-user-name>Loading...</div>
+        <div class="user-role" data-user-role>user</div>
+      </div>
+    </div>
+    <button id="logout-btn" class="btn btn-ghost btn-sm btn-full mt-8" 
+            style="color:var(--red);border-color:rgba(239,68,68,0.2);">
+      🚪 Logout
+    </button>
+  </div>
+</aside>

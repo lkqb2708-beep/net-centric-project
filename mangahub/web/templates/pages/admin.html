@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Admin Panel — MangaHub</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><div class="logo-icon">M</div><span class="logo-text">MangaHub</span></div>
+    <div style="flex:1;overflow-y:auto;padding-bottom:8px;">
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Main</div>
+        <div class="nav-item" data-href="/dashboard"><span class="nav-icon">🏠</span>Dashboard</div>
+        <div class="nav-item" data-href="/browse"><span class="nav-icon">🔍</span>Browse</div>
+        <div class="nav-item" data-href="/library"><span class="nav-icon">📚</span>My Library</div>
+        <div class="nav-item" data-href="/history"><span class="nav-icon">🕐</span>History</div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Community</div>
+        <div class="nav-item" data-href="/chat"><span class="nav-icon">💬</span>Chat</div>
+        <div class="nav-item" data-href="/notifications"><span class="nav-icon">🔔</span>Notifications<span class="nav-badge notif-badge hidden">0</span></div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Account</div>
+        <div class="nav-item" data-href="/stats"><span class="nav-icon">📊</span>Statistics</div>
+        <div class="nav-item" data-href="/settings"><span class="nav-icon">⚙️</span>Settings</div>
+        <div class="nav-item active" data-href="/admin"><span class="nav-icon">🛡️</span>Admin</div>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-info" onclick="location.href='/settings'"><div class="user-avatar" data-user-avatar></div>
+        <div><div class="user-name" data-user-name>Loading...</div><div class="user-role" data-user-role>user</div></div>
+      </div>
+      <button id="logout-btn" class="btn btn-ghost btn-sm btn-full mt-8" style="color:var(--red);border-color:rgba(239,68,68,0.2);">🚪 Logout</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div style="flex:1;"><h2 style="font-size:18px;font-weight:700;">🛡️ Admin Panel</h2></div>
+      <button class="btn btn-secondary btn-sm" onclick="refreshAll()">🔄 Refresh</button>
+    </div>
+    <div class="page-body">
+      <div class="page-title">Server Health & Admin</div>
+      <div class="page-subtitle" style="margin-bottom:28px;">Monitor all services and manage the platform</div>
+
+      <!-- Service Health -->
+      <div class="card" style="margin-bottom:24px;">
+        <h3 style="margin-bottom:16px;">⚡ Service Status</h3>
+        <div class="health-grid" id="health-grid">
+          <div class="skeleton" style="height:58px;border-radius:8px;"></div>
+          <div class="skeleton" style="height:58px;border-radius:8px;"></div>
+          <div class="skeleton" style="height:58px;border-radius:8px;"></div>
+          <div class="skeleton" style="height:58px;border-radius:8px;"></div>
+          <div class="skeleton" style="height:58px;border-radius:8px;"></div>
+          <div class="skeleton" style="height:58px;border-radius:8px;"></div>
+        </div>
+      </div>
+
+      <!-- Server Stats -->
+      <div class="grid-2" style="margin-bottom:24px;align-items:start;">
+        <div class="card">
+          <h3 style="margin-bottom:16px;">📈 Server Statistics</h3>
+          <div id="server-stats"></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:16px;">💻 System Info</h3>
+          <div id="system-info"></div>
+        </div>
+      </div>
+
+      <!-- Protocol Endpoints -->
+      <div class="card" style="margin-bottom:24px;">
+        <h3 style="margin-bottom:16px;">🌐 Protocol Endpoints</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Protocol</th><th>Endpoint</th><th>Purpose</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>HTTP REST</td><td>:8080/api/*</td><td>Main API & Web App</td><td><span class="badge badge-completed">Active</span></td></tr>
+              <tr><td>WebSocket</td><td>:8080/ws</td><td>Real-time chat & notifications</td><td><span class="badge badge-completed">Active</span></td></tr>
+              <tr><td>TCP</td><td>:9001</td><td>Reading progress sync</td><td><span class="badge badge-completed">Active</span></td></tr>
+              <tr><td>UDP</td><td>:9002</td><td>Chapter release notifications</td><td><span class="badge badge-completed">Active</span></td></tr>
+              <tr><td>gRPC</td><td>:9003</td><td>Internal service calls</td><td><span class="badge badge-completed">Active</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card">
+        <h3 style="margin-bottom:16px;">⚙️ Quick Actions</h3>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button class="btn btn-secondary" onclick="pingServer()">🏓 Ping Server</button>
+          <button class="btn btn-secondary" onclick="viewLogs()">📋 View Logs</button>
+          <button class="btn btn-secondary" onclick="triggerBackup()">💾 Backup DB</button>
+          <button class="btn btn-danger" onclick="if(confirm('Reload health data?'))refreshAll()">🔄 Force Refresh</button>
+        </div>
+      </div>
+
+      <!-- Logs -->
+      <div class="card mt-24" id="logs-section" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <h3>📋 Server Logs</h3>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('logs-section').style.display='none'">✕</button>
+        </div>
+        <div id="logs-container" style="font-family:monospace;font-size:12px;background:var(--bg-0);border-radius:8px;padding:16px;max-height:400px;overflow-y:auto;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="/static/js/mhub_main.js?v=1775507111480"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  if (!Auth.guard()) return;
+  loadHealth();
+  loadServerStats();
+});
+
+async function loadHealth() {
+  try {
+    const res = await API.get('/api/admin/health');
+    if (!res.success) return;
+    const h = res.data;
+    const services = h.services || {};
+    document.getElementById('health-grid').innerHTML = Object.entries(services).map(([name, status]) => `
+      <div class="health-item">
+        <div class="health-dot ${status==='ok'?'ok':'error'}"></div>
+        <div>
+          <div style="font-size:14px;font-weight:600;text-transform:capitalize;">${name.toUpperCase()}</div>
+          <div style="font-size:12px;color:var(--text-3);">${status}</div>
+        </div>
+      </div>`).join('');
+
+    document.getElementById('system-info').innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Version</span><strong>${h.version}</strong></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Uptime</span><strong>${h.uptime}</strong></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Goroutines</span><strong>${h.goroutines}</strong></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Memory (Alloc)</span><strong>${h.memory?.alloc_mb||0} MB</strong></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Memory (Sys)</span><strong>${h.memory?.sys_mb||0} MB</strong></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">GC Runs</span><strong>${h.memory?.gc_runs||0}</strong></div>
+      </div>`;
+  } catch(err){
+    document.getElementById('health-grid').innerHTML = '<div style="color:var(--red);">Failed to load health data</div>';
+  }
+}
+
+async function loadServerStats() {
+  try {
+    const res = await API.get('/api/admin/stats');
+    if (!res.success) return;
+    const s = res.data;
+    document.getElementById('server-stats').innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Total Users</span><strong>${s.users}</strong></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Total Manga</span><strong>${s.manga}</strong></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Library Entries</span><strong>${s.library_entries}</strong></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Chat Messages</span><strong>${s.messages}</strong></div>
+      </div>`;
+  } catch(err){}
+}
+
+async function pingServer() {
+  const start = Date.now();
+  const res = await API.get('/api/admin/ping');
+  const ms = Date.now() - start;
+  if (res.success) Toast.success(`🏓 Pong! Round-trip: ${ms}ms`);
+  else Toast.error('Ping failed');
+}
+
+async function viewLogs() {
+  const section = document.getElementById('logs-section');
+  section.style.display = 'block';
+  section.scrollIntoView({behavior:'smooth'});
+  const res = await API.get('/api/admin/logs');
+  const container = document.getElementById('logs-container');
+  if (res.success) {
+    const logs = res.data || [];
+    container.innerHTML = logs.length ? logs.map(l =>
+      `<div style="color:${l.level==='error'?'var(--red)':l.level==='warn'?'var(--accent-3)':'var(--text-2)'};padding:4px 0;border-bottom:1px solid var(--border);">[${l.level?.toUpperCase()}] ${new Date(l.created_at).toLocaleTimeString()} — ${l.message}</div>`
+    ).join('') : '<div style="color:var(--text-3);">No logs available</div>';
+  }
+}
+
+async function triggerBackup() {
+  const res = await API.post('/api/admin/backup', {});
+  if (res.success) { Toast.success('Backup info generated'); alert(res.data.command); }
+  else Toast.error('Backup failed');
+}
+
+function refreshAll() { loadHealth(); loadServerStats(); Toast.info('Refreshed'); }
+</script>
+</body>
+</html>

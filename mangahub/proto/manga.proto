@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package manga;
+option go_package = "mangahub/proto";
+
+service MangaService {
+  rpc GetManga     (GetMangaRequest)    returns (MangaResponse);
+  rpc SearchManga  (SearchRequest)      returns (MangaListResponse);
+  rpc GetUserStats (UserStatsRequest)   returns (UserStatsResponse);
+  rpc Ping         (PingRequest)        returns (PongResponse);
+}
+
+message GetMangaRequest {
+  string id = 1;
+}
+
+message SearchRequest {
+  string query   = 1;
+  string status  = 2;
+  string genre   = 3;
+  int32  page    = 4;
+  int32  limit   = 5;
+}
+
+message UserStatsRequest {
+  string user_id = 1;
+}
+
+message PingRequest {
+  string message = 1;
+}
+
+message MangaResponse {
+  string   id            = 1;
+  string   title         = 2;
+  string   author        = 3;
+  string   status        = 4;
+  int32    chapter_count = 5;
+  string   cover_url     = 6;
+  double   rating        = 7;
+  string   description   = 8;
+  repeated string genres = 9;
+}
+
+message MangaListResponse {
+  repeated MangaResponse manga = 1;
+  int32 total                  = 2;
+  int32 page                   = 3;
+}
+
+message UserStatsResponse {
+  string  user_id         = 1;
+  int32   total_manga     = 2;
+  int32   reading         = 3;
+  int32   completed       = 4;
+  int32   total_chapters  = 5;
+  double  average_rating  = 6;
+}
+
+message PongResponse {
+  string message   = 1;
+  string server_id = 2;
+}

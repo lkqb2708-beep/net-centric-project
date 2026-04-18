@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Notifications — MangaHub</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><div class="logo-icon">M</div><span class="logo-text">MangaHub</span></div>
+    <div style="flex:1;overflow-y:auto;padding-bottom:8px;">
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Main</div>
+        <div class="nav-item" data-href="/dashboard"><span class="nav-icon">🏠</span>Dashboard</div>
+        <div class="nav-item" data-href="/browse"><span class="nav-icon">🔍</span>Browse</div>
+        <div class="nav-item" data-href="/library"><span class="nav-icon">📚</span>My Library</div>
+        <div class="nav-item" data-href="/history"><span class="nav-icon">🕐</span>History</div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Community</div>
+        <div class="nav-item" data-href="/chat"><span class="nav-icon">💬</span>Chat</div>
+        <div class="nav-item active" data-href="/notifications"><span class="nav-icon">🔔</span>Notifications</div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Account</div>
+        <div class="nav-item" data-href="/stats"><span class="nav-icon">📊</span>Statistics</div>
+        <div class="nav-item" data-href="/settings"><span class="nav-icon">⚙️</span>Settings</div>
+        <div class="nav-item" data-href="/admin"><span class="nav-icon">🛡️</span>Admin</div>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-info"><div class="user-avatar" data-user-avatar></div>
+        <div><div class="user-name" data-user-name>Loading...</div><div class="user-role" data-user-role>user</div></div>
+      </div>
+      <button id="logout-btn" class="btn btn-ghost btn-sm btn-full mt-8" style="color:var(--red);border-color:rgba(239,68,68,0.2);">🚪 Logout</button>
+    </div>
+  </aside>
+  <div class="main-content">
+    <div class="topbar">
+      <div style="flex:1;"><h2 style="font-size:18px;font-weight:700;">🔔 Notifications</h2></div>
+      <button class="btn btn-ghost btn-sm" onclick="markAllRead()">✓ Mark all read</button>
+    </div>
+    <div class="page-body">
+      <div id="notif-list" class="card">
+        <div class="skeleton" style="height:70px;border-radius:8px;margin-bottom:10px;"></div>
+        <div class="skeleton" style="height:70px;border-radius:8px;margin-bottom:10px;"></div>
+        <div class="skeleton" style="height:70px;border-radius:8px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="toast-container" class="toast-container"></div>
+<script src="/static/js/mhub_main.js?v=1775507111480"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!Auth.guard()) return;
+  loadNotifs();
+  WS.on('notification', () => loadNotifs());
+});
+
+async function loadNotifs() {
+  const res = await API.get('/api/notifications');
+  if (!res.success) return;
+  const notifs = res.data?.notifications || [];
+  const el = document.getElementById('notif-list');
+  if (!notifs.length) {
+    el.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-3);"><div style="font-size:48px;margin-bottom:12px;">🔕</div><h3>No notifications</h3><p style="margin-top:8px;">You are all caught up!</p></div>';
+    return;
+  }
+  el.innerHTML = notifs.map(n => `
+    <div class="notif-item ${n.is_read?'':'unread'}" onclick="markRead('${n.id}',this)">
+      <div class="notif-dot" style="${n.is_read?'background:var(--bg-3)':''}"></div>
+      <div style="flex:1;">
+        <div style="font-weight:${n.is_read?'400':'600'};font-size:14px;">${n.title}</div>
+        <div style="font-size:13px;color:var(--text-2);margin-top:2px;">${n.body}</div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:4px;">${timeAgo(n.created_at)}</div>
+      </div>
+    </div>`).join('');
+}
+
+async function markRead(id, el) {
+  await API.put(`/api/notifications/${id}/read`, {});
+  el.classList.remove('unread');
+  el.querySelector('.notif-dot').style.background = 'var(--bg-3)';
+}
+
+async function markAllRead() {
+  await API.put('/api/notifications/read-all', {});
+  Toast.success('All marked as read');
+  loadNotifs();
+}
+</script>
+</body>
+</html>

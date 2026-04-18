@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Browse Manga — MangaHub</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><div class="logo-icon">M</div><span class="logo-text">MangaHub</span></div>
+    <div style="flex:1;overflow-y:auto;padding-bottom:8px;">
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Main</div>
+        <div class="nav-item" data-href="/dashboard"><span class="nav-icon">🏠</span>Dashboard</div>
+        <div class="nav-item active" data-href="/browse"><span class="nav-icon">🔍</span>Browse</div>
+        <div class="nav-item" data-href="/library"><span class="nav-icon">📚</span>My Library</div>
+        <div class="nav-item" data-href="/history"><span class="nav-icon">🕐</span>History</div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Community</div>
+        <div class="nav-item" data-href="/chat"><span class="nav-icon">💬</span>Chat</div>
+        <div class="nav-item" data-href="/notifications"><span class="nav-icon">🔔</span>Notifications<span class="nav-badge notif-badge hidden">0</span></div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Account</div>
+        <div class="nav-item" data-href="/stats"><span class="nav-icon">📊</span>Statistics</div>
+        <div class="nav-item" data-href="/settings"><span class="nav-icon">⚙️</span>Settings</div>
+        <div class="nav-item" data-href="/admin"><span class="nav-icon">🛡️</span>Admin</div>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-info" onclick="location.href='/settings'">
+        <div class="user-avatar" data-user-avatar></div>
+        <div><div class="user-name" data-user-name>Loading...</div><div class="user-role" data-user-role>user</div></div>
+      </div>
+      <button id="logout-btn" class="btn btn-ghost btn-sm btn-full mt-8" style="color:var(--red);border-color:rgba(239,68,68,0.2);">🚪 Logout</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div style="flex:1;"><h2 style="font-size:18px;font-weight:700;">Browse Manga</h2></div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="manga-count" style="font-size:13px;color:var(--text-3);"></span>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <!-- Search + Filters -->
+      <div class="card" style="margin-bottom:24px;">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+          <div style="flex:1;min-width:200px;">
+            <div class="search-bar">
+              <span class="search-icon">🔍</span>
+              <input id="search-input" type="text" placeholder="Search manga by title or author..." oninput="debounceSearch()">
+            </div>
+          </div>
+          <div>
+            <select id="status-filter" class="form-input" style="width:150px;" onchange="loadManga()">
+              <option value="">All Status</option>
+              <option value="ongoing">Ongoing</option>
+              <option value="completed">Completed</option>
+              <option value="hiatus">Hiatus</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          <div>
+            <select id="genre-filter" class="form-input" style="width:150px;" onchange="loadManga()">
+              <option value="">All Genres</option>
+              <option value="Action">Action</option>
+              <option value="Adventure">Adventure</option>
+              <option value="Comedy">Comedy</option>
+              <option value="Drama">Drama</option>
+              <option value="Fantasy">Fantasy</option>
+              <option value="Horror">Horror</option>
+              <option value="Mystery">Mystery</option>
+              <option value="Romance">Romance</option>
+              <option value="Sci-Fi">Sci-Fi</option>
+              <option value="Seinen">Seinen</option>
+              <option value="Shounen">Shounen</option>
+              <option value="Slice of Life">Slice of Life</option>
+            </select>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="clearFilters()">✕ Clear</button>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div id="manga-grid" class="manga-grid"></div>
+
+      <!-- Pagination -->
+      <div id="pagination" style="display:flex;justify-content:center;align-items:center;gap:8px;margin-top:32px;"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="/static/js/mhub_main.js?v=1775507111480"></script>
+
+
+<script>
+let currentPage = 1;
+let totalPages  = 1;
+let debounceTimer;
+
+async function loadManga(page = 1) {
+  currentPage = page;
+  const q      = document.getElementById('search-input').value.trim();
+  const status = document.getElementById('status-filter').value;
+  const genre  = document.getElementById('genre-filter').value;
+
+  const grid = document.getElementById('manga-grid');
+  grid.innerHTML = skeletonMangaCards(12);
+
+  const params = new URLSearchParams({ page, page_size: 24 });
+  if (q)      params.set('q', q);
+  if (status) params.set('status', status);
+  if (genre)  params.set('genre', genre);
+
+  try {
+    const res = await API.get(`/api/manga?${params}`);
+    if (!res.success) { grid.innerHTML = '<div style="color:var(--text-3);">Failed to load manga.</div>'; return; }
+
+    const { data, total, total_pages } = res.data;
+    totalPages = total_pages || 1;
+    document.getElementById('manga-count').textContent = `${total} titles found`;
+
+    if (!data || !data.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-3);">
+        <div style="font-size:48px;margin-bottom:12px;">🔍</div>
+        <h3 style="margin-bottom:8px;">No manga found</h3>
+        <p>Try different search terms or filters.</p>
+      </div>`;
+      return;
+    }
+
+    grid.innerHTML = data.map(renderMangaCard).join('');
+    renderPagination();
+  } catch(err){
+    grid.innerHTML = '<div style="color:var(--text-3);padding:16px;">Error loading manga.</div>';
+  }
+}
+
+function renderPagination() {
+  const el = document.getElementById('pagination');
+  if (totalPages <= 1) { el.innerHTML = ''; return; }
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) {
+    pages.push(`<button class="btn ${i===currentPage?'btn-primary':'btn-ghost'} btn-sm" onclick="loadManga(${i})">${i}</button>`);
+  }
+  el.innerHTML = `
+    <button class="btn btn-ghost btn-sm" onclick="loadManga(${currentPage-1})" ${currentPage===1?'disabled':''}>← Prev</button>
+    ${pages.slice(Math.max(0,currentPage-3), currentPage+2).join('')}
+    <button class="btn btn-ghost btn-sm" onclick="loadManga(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>Next →</button>`;
+}
+
+function debounceSearch() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => loadManga(1), 350);
+}
+
+function clearFilters() {
+  document.getElementById('search-input').value = '';
+  document.getElementById('status-filter').value = '';
+  document.getElementById('genre-filter').value = '';
+  loadManga(1);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('[Browse] DOMContentLoaded fired');
+  if (typeof Auth === 'undefined') {
+    console.error('[Browse] CRITICAL: Auth system failed to load!');
+    return;
+  }
+  if (!Auth.guard()) return;
+  console.log('[Browse] Auth check passed, loading manga...');
+  
+  // Check URL params for pre-fill
+  const params = new URLSearchParams(location.search);
+  if (params.get('q')) document.getElementById('search-input').value = params.get('q');
+  loadManga(1);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Settings — MangaHub</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><div class="logo-icon">M</div><span class="logo-text">MangaHub</span></div>
+    <div style="flex:1;overflow-y:auto;padding-bottom:8px;">
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Main</div>
+        <div class="nav-item" data-href="/dashboard"><span class="nav-icon">🏠</span>Dashboard</div>
+        <div class="nav-item" data-href="/browse"><span class="nav-icon">🔍</span>Browse</div>
+        <div class="nav-item" data-href="/library"><span class="nav-icon">📚</span>My Library</div>
+        <div class="nav-item" data-href="/history"><span class="nav-icon">🕐</span>History</div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Community</div>
+        <div class="nav-item" data-href="/chat"><span class="nav-icon">💬</span>Chat</div>
+        <div class="nav-item" data-href="/notifications"><span class="nav-icon">🔔</span>Notifications<span class="nav-badge notif-badge hidden">0</span></div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Account</div>
+        <div class="nav-item" data-href="/stats"><span class="nav-icon">📊</span>Statistics</div>
+        <div class="nav-item active" data-href="/settings"><span class="nav-icon">⚙️</span>Settings</div>
+        <div class="nav-item" data-href="/admin"><span class="nav-icon">🛡️</span>Admin</div>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-info"><div class="user-avatar" data-user-avatar></div>
+        <div><div class="user-name" data-user-name>Loading...</div><div class="user-role" data-user-role>user</div></div>
+      </div>
+      <button id="logout-btn" class="btn btn-ghost btn-sm btn-full mt-8" style="color:var(--red);border-color:rgba(239,68,68,0.2);">🚪 Logout</button>
+    </div>
+  </aside>
+  <div class="main-content">
+    <div class="topbar"><div style="flex:1;"><h2 style="font-size:18px;font-weight:700;">⚙️ Settings</h2></div></div>
+    <div class="page-body" style="max-width:640px;">
+      <div class="page-title">Account Settings</div>
+      <div class="page-subtitle" style="margin-bottom:28px;">Manage your profile and preferences</div>
+
+      <!-- Profile -->
+      <div class="card" style="margin-bottom:20px;">
+        <h3 style="margin-bottom:16px;">👤 Profile</h3>
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+          <div class="user-avatar" data-user-avatar style="width:64px;height:64px;font-size:24px;"></div>
+          <div>
+            <div class="user-name" data-user-name style="font-size:18px;font-weight:700;"></div>
+            <div class="user-role" data-user-role style="color:var(--text-2);"></div>
+          </div>
+        </div>
+        <form id="profile-form" style="display:flex;flex-direction:column;gap:14px;">
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input id="pf-username" type="text" class="form-input" placeholder="username">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Bio</label>
+            <textarea id="pf-bio" class="form-input" rows="2" placeholder="Tell us about yourself..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Avatar URL</label>
+            <input id="pf-avatar" type="url" class="form-input" placeholder="https://...">
+          </div>
+          <button type="submit" class="btn btn-primary">💾 Save Profile</button>
+        </form>
+      </div>
+
+      <!-- Change Password -->
+      <div class="card" style="margin-bottom:20px;">
+        <h3 style="margin-bottom:16px;">🔑 Change Password</h3>
+        <form id="password-form" style="display:flex;flex-direction:column;gap:14px;">
+          <div class="form-group">
+            <label class="form-label">Current Password</label>
+            <input id="old-pw" type="password" class="form-input" placeholder="Current password">
+          </div>
+          <div class="form-group">
+            <label class="form-label">New Password</label>
+            <input id="new-pw" type="password" class="form-input" placeholder="Min 8 characters">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm New Password</label>
+            <input id="confirm-pw2" type="password" class="form-input" placeholder="Repeat new password">
+          </div>
+          <div id="pw-error" class="form-error" style="display:none;"></div>
+          <button type="submit" class="btn btn-secondary">🔒 Change Password</button>
+        </form>
+      </div>
+
+      <!-- Account Info -->
+      <div class="card">
+        <h3 style="margin-bottom:16px;">ℹ️ Account Info</h3>
+        <div id="account-info" style="display:flex;flex-direction:column;gap:10px;"></div>
+        <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
+          <button class="btn btn-danger" onclick="Auth.logout()">🚪 Logout from all devices</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="toast-container" class="toast-container"></div>
+<script src="/static/js/mhub_main.js?v=1775507111480"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!Auth.guard()) return;
+  const res = await API.get('/api/auth/me');
+  if (res.success) {
+    const u = res.data;
+    document.getElementById('pf-username').value = u.username || '';
+    document.getElementById('pf-bio').value = u.bio || '';
+    document.getElementById('pf-avatar').value = u.avatar_url || '';
+    document.getElementById('account-info').innerHTML = `
+      <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Email</span><strong>${u.email||''}</strong></div>
+      <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Role</span><strong>${u.role||'user'}</strong></div>
+      <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Member since</span><strong>${formatDate(u.created_at)}</strong></div>`;
+  }
+
+  document.getElementById('profile-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const res = await API.put('/api/auth/me', {
+      username: document.getElementById('pf-username').value.trim(),
+      bio: document.getElementById('pf-bio').value,
+      avatar_url: document.getElementById('pf-avatar').value.trim(),
+    });
+    if (res.success) { API.setUser(res.data); Toast.success('Profile updated!'); }
+    else Toast.error(res.error || 'Failed to update profile');
+  });
+
+  document.getElementById('password-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById('pw-error');
+    errEl.style.display = 'none';
+    const np = document.getElementById('new-pw').value;
+    const cp = document.getElementById('confirm-pw2').value;
+    if (np !== cp) { errEl.textContent = 'Passwords do not match'; errEl.style.display = 'block'; return; }
+    const res = await API.post('/api/auth/change-password', {
+      old_password: document.getElementById('old-pw').value,
+      new_password: np,
+    });
+    if (res.success) { Toast.success('Password changed!'); document.getElementById('password-form').reset(); }
+    else { errEl.textContent = res.error || 'Failed'; errEl.style.display = 'block'; }
+  });
+});
+</script>
+</body>
+</html>

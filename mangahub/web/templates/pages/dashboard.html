@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Dashboard — MangaHub</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><div class="logo-icon">M</div><span class="logo-text">MangaHub</span></div>
+    <div style="flex:1;overflow-y:auto;padding-bottom:8px;">
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Main</div>
+        <div class="nav-item active" data-href="/dashboard"><span class="nav-icon">🏠</span>Dashboard</div>
+        <div class="nav-item" data-href="/browse"><span class="nav-icon">🔍</span>Browse</div>
+        <div class="nav-item" data-href="/library"><span class="nav-icon">📚</span>My Library</div>
+        <div class="nav-item" data-href="/history"><span class="nav-icon">🕐</span>History</div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Community</div>
+        <div class="nav-item" data-href="/chat"><span class="nav-icon">💬</span>Chat</div>
+        <div class="nav-item" data-href="/notifications"><span class="nav-icon">🔔</span>Notifications<span class="nav-badge notif-badge hidden">0</span></div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Account</div>
+        <div class="nav-item" data-href="/stats"><span class="nav-icon">📊</span>Statistics</div>
+        <div class="nav-item" data-href="/settings"><span class="nav-icon">⚙️</span>Settings</div>
+        <div class="nav-item" data-href="/admin"><span class="nav-icon">🛡️</span>Admin</div>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-info" onclick="location.href='/settings'">
+        <div class="user-avatar" data-user-avatar></div>
+        <div><div class="user-name" data-user-name>Loading...</div><div class="user-role" data-user-role>user</div></div>
+      </div>
+      <button id="logout-btn" class="btn btn-ghost btn-sm btn-full mt-8" style="color:var(--red);border-color:rgba(239,68,68,0.2);">🚪 Logout</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <!-- Topbar -->
+    <div class="topbar">
+      <button id="sidebar-toggle" class="btn btn-icon btn-ghost" style="display:none;">☰</button>
+      <div style="flex:1;">
+        <h2 style="font-size:18px;font-weight:700;">Dashboard</h2>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div id="ws-status" style="width:8px;height:8px;border-radius:50%;background:var(--text-3);" title="WebSocket"></div>
+        <span style="font-size:12px;color:var(--text-3);" id="ws-label">Connecting...</span>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <!-- Welcome -->
+      <div style="margin-bottom:32px;">
+        <div class="page-title" id="welcome-text">Good morning 👋</div>
+        <div class="page-subtitle">Here's what's happening with your reading list</div>
+      </div>
+
+      <!-- Stats row -->
+      <div class="grid-4" id="stats-grid">
+        <div class="stat-card skeleton" style="height:96px;"></div>
+        <div class="stat-card skeleton" style="height:96px;"></div>
+        <div class="stat-card skeleton" style="height:96px;"></div>
+        <div class="stat-card skeleton" style="height:96px;"></div>
+      </div>
+
+      <div class="grid-2 mt-32" style="align-items:start;">
+        <!-- Currently reading -->
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <h3>Currently Reading</h3>
+            <a href="/library?status=reading" class="btn btn-ghost btn-sm">View all →</a>
+          </div>
+          <div id="reading-list" style="display:flex;flex-direction:column;gap:12px;">
+            <div class="skeleton" style="height:72px;border-radius:8px;"></div>
+            <div class="skeleton" style="height:72px;border-radius:8px;"></div>
+            <div class="skeleton" style="height:72px;border-radius:8px;"></div>
+          </div>
+        </div>
+
+        <!-- Activity Feed -->
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <h3>Recent Activity</h3>
+            <a href="/history" class="btn btn-ghost btn-sm">History →</a>
+          </div>
+          <div id="activity-list" style="display:flex;flex-direction:column;">
+            <div class="skeleton" style="height:60px;border-radius:8px;margin-bottom:10px;"></div>
+            <div class="skeleton" style="height:60px;border-radius:8px;margin-bottom:10px;"></div>
+            <div class="skeleton" style="height:60px;border-radius:8px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Popular Manga -->
+      <div class="mt-32">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <h3>Popular Manga</h3>
+          <a href="/browse" class="btn btn-ghost btn-sm">Browse all →</a>
+        </div>
+        <div class="manga-grid" id="popular-grid">
+          <!-- Skeletons -->
+          <div class="manga-card"><div class="skeleton" style="aspect-ratio:3/4;width:100%;"></div></div>
+          <div class="manga-card"><div class="skeleton" style="aspect-ratio:3/4;width:100%;"></div></div>
+          <div class="manga-card"><div class="skeleton" style="aspect-ratio:3/4;width:100%;"></div></div>
+          <div class="manga-card"><div class="skeleton" style="aspect-ratio:3/4;width:100%;"></div></div>
+          <div class="manga-card"><div class="skeleton" style="aspect-ratio:3/4;width:100%;"></div></div>
+          <div class="manga-card"><div class="skeleton" style="aspect-ratio:3/4;width:100%;"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="/static/js/mhub_main.js?v=1775507111480"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!Auth.guard()) return;
+
+  // Welcome greeting
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const user = Auth.currentUser();
+  document.getElementById('welcome-text').textContent = `${greeting}, ${user?.username || ''}! 👋`;
+
+  // WS Status indicator
+  WS.on('connected', () => {
+    document.getElementById('ws-status').style.background = 'var(--green)';
+    document.getElementById('ws-label').textContent = 'Live';
+  });
+
+  // Load stats
+  try {
+    const statsRes = await API.get('/api/library/stats');
+    if (statsRes.success) {
+      const s = statsRes.data;
+      document.getElementById('stats-grid').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-icon" style="background:rgba(76,159,255,0.15);">📚</div>
+          <div><div class="stat-value">${s.total_manga}</div><div class="stat-label">Total Manga</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:rgba(34,197,94,0.15);">📖</div>
+          <div><div class="stat-value">${s.reading}</div><div class="stat-label">Reading</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:rgba(229,81,63,0.15);">✅</div>
+          <div><div class="stat-value">${s.completed}</div><div class="stat-label">Completed</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:rgba(255,179,71,0.15);">📑</div>
+          <div><div class="stat-value">${s.total_chapters}</div><div class="stat-label">Chapters Read</div></div>
+        </div>`;
+    }
+  } catch(err){}
+
+  // Load currently reading
+  try {
+    const libRes = await API.get('/api/library?status=reading');
+    if (libRes.success) {
+      const entries = libRes.data || [];
+      const el = document.getElementById('reading-list');
+      if (entries.length === 0) {
+        el.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-3);">
+          <div style="font-size:32px;margin-bottom:8px;">📭</div>
+          <div>No manga in reading list</div>
+          <a href="/browse" class="btn btn-primary btn-sm mt-16">Browse Manga</a>
+        </div>`;
+      } else {
+        el.innerHTML = entries.slice(0, 5).map(e => {
+          const m = e.manga;
+          const pct = m.chapter_count > 0 ? Math.round((e.current_chapter / m.chapter_count) * 100) : 0;
+          return `
+          <div class="activity-item" style="padding:12px;background:var(--bg-2);border-radius:8px;margin-bottom:8px;cursor:pointer;" onclick="location.href='/manga/${m.id}'">
+            <img src="${m.cover_url||'/static/img/placeholder.svg'}" style="width:44px;height:60px;object-fit:cover;border-radius:4px;flex-shrink:0;" onerror="this.src='/static/img/placeholder.svg'">
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.title}</div>
+              <div style="font-size:12px;color:var(--text-2);margin:2px 0;">Ch.${e.current_chapter} / ${m.chapter_count||'?'}</div>
+              <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill" style="width:${pct}%"></div></div>
+            </div>
+            <div style="font-size:12px;color:var(--accent-2);font-weight:600;">${pct}%</div>
+          </div>`;
+        }).join('');
+      }
+    }
+  } catch(err){}
+
+  // Load reading history as activity
+  try {
+    const histRes = await API.get('/api/history');
+    if (histRes.success) {
+      const items = histRes.data || [];
+      const el = document.getElementById('activity-list');
+      if (!items.length) {
+        el.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-3);font-size:14px;">No reading history yet</div>`;
+      } else {
+        el.innerHTML = items.slice(0,6).map(h => `
+          <div class="activity-item">
+            <div class="activity-dot">📖</div>
+            <div>
+              <div class="activity-text">Read <strong>${h.manga?.title||'Unknown'}</strong> Ch.${h.chapter_number}</div>
+              <div class="activity-time">${timeAgo(h.read_at)}</div>
+            </div>
+          </div>`).join('');
+      }
+    }
+  } catch(err){}
+
+  // Load popular manga
+  try {
+    const mangaRes = await API.get('/api/manga/popular?limit=6');
+    if (mangaRes.success) {
+      const el = document.getElementById('popular-grid');
+      const manga = mangaRes.data || [];
+      el.innerHTML = manga.map(renderMangaCard).join('') ||
+        '<div style="color:var(--text-3);">No manga found. Run the seed command.</div>';
+    }
+  } catch (err) {
+    document.getElementById('popular-grid').innerHTML = '<div style="color:var(--text-3);padding:16px;">Failed to load manga. Is the database seeded?</div>';
+  }
+});
+</script>
+</body>
+</html>

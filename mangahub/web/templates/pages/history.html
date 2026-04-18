@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>History — MangaHub</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><div class="logo-icon">M</div><span class="logo-text">MangaHub</span></div>
+    <div style="flex:1;overflow-y:auto;padding-bottom:8px;">
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Main</div>
+        <div class="nav-item" data-href="/dashboard"><span class="nav-icon">🏠</span>Dashboard</div>
+        <div class="nav-item" data-href="/browse"><span class="nav-icon">🔍</span>Browse</div>
+        <div class="nav-item" data-href="/library"><span class="nav-icon">📚</span>My Library</div>
+        <div class="nav-item active" data-href="/history"><span class="nav-icon">🕐</span>History</div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Community</div>
+        <div class="nav-item" data-href="/chat"><span class="nav-icon">💬</span>Chat</div>
+        <div class="nav-item" data-href="/notifications"><span class="nav-icon">🔔</span>Notifications<span class="nav-badge notif-badge hidden">0</span></div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Account</div>
+        <div class="nav-item" data-href="/stats"><span class="nav-icon">📊</span>Statistics</div>
+        <div class="nav-item" data-href="/settings"><span class="nav-icon">⚙️</span>Settings</div>
+        <div class="nav-item" data-href="/admin"><span class="nav-icon">🛡️</span>Admin</div>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-info"><div class="user-avatar" data-user-avatar></div>
+        <div><div class="user-name" data-user-name>Loading...</div><div class="user-role" data-user-role>user</div></div>
+      </div>
+      <button id="logout-btn" class="btn btn-ghost btn-sm btn-full mt-8" style="color:var(--red);border-color:rgba(239,68,68,0.2);">🚪 Logout</button>
+    </div>
+  </aside>
+  <div class="main-content">
+    <div class="topbar"><div style="flex:1;"><h2 style="font-size:18px;font-weight:700;">🕐 Reading History</h2></div></div>
+    <div class="page-body">
+      <div class="page-title">Reading History</div>
+      <div class="page-subtitle" style="margin-bottom:24px;">Every chapter you have read</div>
+      <div class="card" id="history-list">
+        <div class="skeleton" style="height:60px;border-radius:8px;margin-bottom:8px;"></div>
+        <div class="skeleton" style="height:60px;border-radius:8px;margin-bottom:8px;"></div>
+        <div class="skeleton" style="height:60px;border-radius:8px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="toast-container" class="toast-container"></div>
+<script src="/static/js/mhub_main.js?v=1775507111480"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!Auth.guard()) return;
+  const el = document.getElementById('history-list');
+  const res = await API.get('/api/history');
+  if (!res.success) { el.innerHTML = '<div style="color:var(--text-3);padding:24px;">Failed to load history.</div>'; return; }
+  const items = res.data || [];
+  if (!items.length) {
+    el.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-3);"><div style="font-size:48px;margin-bottom:12px;">📭</div><h3>No history yet</h3><p style="margin-top:8px;">Start reading manga to see your history!</p><a href="/browse" class="btn btn-primary mt-16">Browse Manga</a></div>';
+    return;
+  }
+  el.innerHTML = items.map(h => `
+    <div class="activity-item" style="cursor:pointer;" onclick="location.href='/manga/${h.manga_id}'">
+      <img src="${h.manga?.cover_url||'/static/img/placeholder.svg'}" style="width:40px;height:54px;object-fit:cover;border-radius:4px;flex-shrink:0;" onerror="this.src='/static/img/placeholder.svg'">
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:600;">${h.manga?.title||'Unknown'}</div>
+        <div style="font-size:13px;color:var(--text-2);">Chapter ${h.chapter_number}${h.volume_number ? ' · Vol.'+h.volume_number : ''}</div>
+      </div>
+      <div style="font-size:12px;color:var(--text-3);">${timeAgo(h.read_at)}</div>
+    </div>`).join('');
+});
+</script>
+</body>
+</html>

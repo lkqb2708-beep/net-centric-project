@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Chat — MangaHub</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><div class="logo-icon">M</div><span class="logo-text">MangaHub</span></div>
+    <div style="flex:1;overflow-y:auto;padding-bottom:8px;">
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Main</div>
+        <div class="nav-item" data-href="/dashboard"><span class="nav-icon">🏠</span>Dashboard</div>
+        <div class="nav-item" data-href="/browse"><span class="nav-icon">🔍</span>Browse</div>
+        <div class="nav-item" data-href="/library"><span class="nav-icon">📚</span>My Library</div>
+        <div class="nav-item" data-href="/history"><span class="nav-icon">🕐</span>History</div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Community</div>
+        <div class="nav-item active" data-href="/chat"><span class="nav-icon">💬</span>Chat</div>
+        <div class="nav-item" data-href="/notifications"><span class="nav-icon">🔔</span>Notifications<span class="nav-badge notif-badge hidden">0</span></div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Account</div>
+        <div class="nav-item" data-href="/stats"><span class="nav-icon">📊</span>Statistics</div>
+        <div class="nav-item" data-href="/settings"><span class="nav-icon">⚙️</span>Settings</div>
+        <div class="nav-item" data-href="/admin"><span class="nav-icon">🛡️</span>Admin</div>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-info" onclick="location.href='/settings'"><div class="user-avatar" data-user-avatar></div>
+        <div><div class="user-name" data-user-name>Loading...</div><div class="user-role" data-user-role>user</div></div>
+      </div>
+      <button id="logout-btn" class="btn btn-ghost btn-sm btn-full mt-8" style="color:var(--red);border-color:rgba(239,68,68,0.2);">🚪 Logout</button>
+    </div>
+  </aside>
+
+  <div class="main-content" style="display:flex;flex-direction:column;">
+    <div class="topbar">
+      <div style="flex:1;"><h2 style="font-size:18px;font-weight:700;">💬 Chat</h2></div>
+      <div id="online-count" style="font-size:13px;color:var(--green);">● Online</div>
+    </div>
+    <div class="chat-layout" style="flex:1;">
+      <!-- Room list -->
+      <div class="chat-rooms">
+        <div style="padding:12px 16px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-3);border-bottom:1px solid var(--border);">Rooms</div>
+        <div id="room-list"></div>
+      </div>
+      <!-- Messages -->
+      <div class="chat-main">
+        <div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+          <span style="font-size:18px;">💬</span>
+          <div><div id="room-name" style="font-weight:600;font-size:15px;">Select a room</div>
+          <div id="room-desc" style="font-size:12px;color:var(--text-3);"></div></div>
+        </div>
+        <div class="chat-messages" id="messages-container">
+          <div style="text-align:center;padding:40px;color:var(--text-3);">
+            <div style="font-size:48px;margin-bottom:12px;">💬</div>
+            <div>Select a chat room to start chatting</div>
+          </div>
+        </div>
+        <div class="chat-input-bar">
+          <textarea class="chat-input" id="message-input" placeholder="Type a message... (Enter to send)" rows="1"
+            onkeydown="handleMsgKey(event)" oninput="autoResize(this)" disabled></textarea>
+          <button class="btn btn-primary" id="send-btn" onclick="sendMessage()" disabled>Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="/static/js/mhub_main.js?v=1775507111480"></script>
+<script>
+let activeRoomID = null;
+let currentUser = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!Auth.guard()) return;
+  currentUser = Auth.currentUser();
+  loadRooms();
+
+  // WebSocket chat_message handler
+  WS.on('chat_message', (payload) => {
+    if (payload.room_id === activeRoomID) {
+      appendMessage(payload);
+      scrollToBottom();
+    }
+  });
+});
+
+async function loadRooms() {
+  const res = await API.get('/api/chat/rooms');
+  if (!res.success) return;
+  const rooms = res.data || [];
+  document.getElementById('room-list').innerHTML = rooms.map(r => `
+    <div class="room-item" id="room-${r.id}" onclick="joinRoom('${r.id}','${r.name}','${r.description||''}')">
+      <span style="font-size:18px;">${r.type==='general'?'#':'📕'}</span>
+      <div>
+        <div style="font-size:14px;font-weight:500;">${r.name}</div>
+        <div style="font-size:11px;color:var(--text-3);">${r.message_count||0} messages</div>
+      </div>
+    </div>`).join('');
+  if (rooms.length > 0) joinRoom(rooms[0].id, rooms[0].name, rooms[0].description||'');
+}
+
+async function joinRoom(roomID, name, desc) {
+  activeRoomID = roomID;
+  document.querySelectorAll('.room-item').forEach(el => el.classList.remove('active'));
+  document.getElementById(`room-${roomID}`)?.classList.add('active');
+  document.getElementById('room-name').textContent = name;
+  document.getElementById('room-desc').textContent = desc;
+  document.getElementById('message-input').disabled = false;
+  document.getElementById('send-btn').disabled = false;
+  WS.joinRoom(roomID);
+
+  const msgs = document.getElementById('messages-container');
+  msgs.innerHTML = `<div style="text-align:center;color:var(--text-3);font-size:13px;padding:12px;">Loading messages...</div>`;
+  const res = await API.get(`/api/chat/rooms/${roomID}/messages?limit=50`);
+  if (res.success) {
+    const messages = res.data || [];
+    if (!messages.length) {
+      msgs.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-3);">No messages yet. Start the conversation!</div>`;
+    } else {
+      msgs.innerHTML = '';
+      messages.forEach(m => appendMessage(m));
+      scrollToBottom();
+    }
+  }
+}
+
+function appendMessage(m) {
+  const container = document.getElementById('messages-container');
+  const isOwn = (m.user_id === currentUser?.id || m.username === currentUser?.username);
+  const div = document.createElement('div');
+  div.className = `chat-msg${isOwn ? ' own' : ''}`;
+  const name = m.user?.username || m.username || 'Unknown';
+  const avatar = name[0].toUpperCase();
+  const time = m.created_at ? new Date(m.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
+  div.innerHTML = `
+    ${!isOwn ? `<div class="user-avatar" style="width:32px;height:32px;font-size:12px;flex-shrink:0;">${avatar}</div>` : ''}
+    <div class="chat-msg-bubble">
+      ${!isOwn ? `<div class="chat-msg-name">${name}</div>` : ''}
+      <div class="chat-msg-text">${escapeHtml(m.content)}</div>
+      <div class="chat-msg-time">${time}</div>
+    </div>`;
+  container.appendChild(div);
+}
+
+async function sendMessage() {
+  const input = document.getElementById('message-input');
+  const content = input.value.trim();
+  if (!content || !activeRoomID) return;
+  input.value = ''; input.style.height = '';
+  const res = await API.post(`/api/chat/rooms/${activeRoomID}/messages`, { content });
+  if (!res.success) Toast.error('Failed to send message');
+}
+
+function handleMsgKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(el) {
+  el.style.height = ''; el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function scrollToBottom() {
+  const el = document.getElementById('messages-container');
+  el.scrollTop = el.scrollHeight;
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

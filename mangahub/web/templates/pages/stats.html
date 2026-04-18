@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Statistics — MangaHub</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><div class="logo-icon">M</div><span class="logo-text">MangaHub</span></div>
+    <div style="flex:1;overflow-y:auto;padding-bottom:8px;">
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Main</div>
+        <div class="nav-item" data-href="/dashboard"><span class="nav-icon">🏠</span>Dashboard</div>
+        <div class="nav-item" data-href="/browse"><span class="nav-icon">🔍</span>Browse</div>
+        <div class="nav-item" data-href="/library"><span class="nav-icon">📚</span>My Library</div>
+        <div class="nav-item" data-href="/history"><span class="nav-icon">🕐</span>History</div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Community</div>
+        <div class="nav-item" data-href="/chat"><span class="nav-icon">💬</span>Chat</div>
+        <div class="nav-item" data-href="/notifications"><span class="nav-icon">🔔</span>Notifications<span class="nav-badge notif-badge hidden">0</span></div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Account</div>
+        <div class="nav-item active" data-href="/stats"><span class="nav-icon">📊</span>Statistics</div>
+        <div class="nav-item" data-href="/settings"><span class="nav-icon">⚙️</span>Settings</div>
+        <div class="nav-item" data-href="/admin"><span class="nav-icon">🛡️</span>Admin</div>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-info" onclick="location.href='/settings'"><div class="user-avatar" data-user-avatar></div>
+        <div><div class="user-name" data-user-name>Loading...</div><div class="user-role" data-user-role>user</div></div>
+      </div>
+      <button id="logout-btn" class="btn btn-ghost btn-sm btn-full mt-8" style="color:var(--red);border-color:rgba(239,68,68,0.2);">🚪 Logout</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar"><div style="flex:1;"><h2 style="font-size:18px;font-weight:700;">📊 Statistics</h2></div></div>
+    <div class="page-body">
+      <div class="page-title">Your Reading Stats</div>
+      <div class="page-subtitle" style="margin-bottom:32px;">An overview of your manga journey</div>
+
+      <div class="grid-4" id="main-stats">
+        <div class="skeleton" style="height:100px;border-radius:12px;"></div>
+        <div class="skeleton" style="height:100px;border-radius:12px;"></div>
+        <div class="skeleton" style="height:100px;border-radius:12px;"></div>
+        <div class="skeleton" style="height:100px;border-radius:12px;"></div>
+      </div>
+
+      <div class="grid-2 mt-32" style="align-items:start;">
+        <!-- Status breakdown -->
+        <div class="card">
+          <h3 style="margin-bottom:16px;">Status Breakdown</h3>
+          <div id="status-breakdown"></div>
+        </div>
+        <!-- Reading summary -->
+        <div class="card">
+          <h3 style="margin-bottom:16px;">Reading Summary</h3>
+          <div id="reading-summary"></div>
+        </div>
+      </div>
+
+      <!-- Export -->
+      <div class="card mt-24">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+          <div>
+            <h3>Export & Backup</h3>
+            <p style="color:var(--text-2);font-size:14px;margin-top:4px;">Download your library data as JSON</p>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secondary" onclick="exportLibrary()">📥 Export Library</button>
+            <button class="btn btn-secondary" onclick="exportHistory()">📥 Export History</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="toast-container" class="toast-container"></div>
+<script src="/static/js/mhub_main.js?v=1775507111480"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!Auth.guard()) return;
+  try {
+    const res = await API.get('/api/library/stats');
+    if (!res.success) return;
+    const s = res.data;
+    document.getElementById('main-stats').innerHTML = `
+      <div class="stat-card"><div class="stat-icon" style="background:rgba(76,159,255,0.15);">📚</div>
+        <div><div class="stat-value">${s.total_manga}</div><div class="stat-label">Total in Library</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:rgba(255,179,71,0.15);">📑</div>
+        <div><div class="stat-value">${s.total_chapters}</div><div class="stat-label">Chapters Read</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:rgba(168,85,247,0.15);">📦</div>
+        <div><div class="stat-value">${s.total_volumes}</div><div class="stat-label">Volumes Read</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:rgba(229,81,63,0.15);">⭐</div>
+        <div><div class="stat-value">${parseFloat(s.average_rating||0).toFixed(1)}</div><div class="stat-label">Avg. Rating</div></div></div>`;
+
+    const statuses = [
+      { key:'reading',      label:'📖 Reading',       count: s.reading,      color:'var(--blue)' },
+      { key:'completed',    label:'✅ Completed',      count: s.completed,    color:'var(--green)' },
+      { key:'plan_to_read', label:'📌 Plan to Read',   count: s.plan_to_read, color:'var(--purple)' },
+      { key:'on_hold',      label:'⏸ On Hold',         count: s.on_hold,      color:'var(--accent-3)' },
+      { key:'dropped',      label:'❌ Dropped',         count: s.dropped,      color:'var(--red)' },
+    ];
+    const total = s.total_manga || 1;
+    document.getElementById('status-breakdown').innerHTML = statuses.map(st => `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${st.color};flex-shrink:0;"></div>
+        <div style="flex:1;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:13px;">${st.label}</span>
+            <span style="font-size:13px;font-weight:600;">${st.count}</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${Math.round((st.count/total)*100)}%;background:${st.color};"></div></div>
+        </div>
+      </div>`).join('');
+
+    document.getElementById('reading-summary').innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;justify-content:space-between;padding:12px;background:var(--bg-2);border-radius:8px;">
+          <span style="color:var(--text-2);">Completion Rate</span>
+          <strong>${total>0?Math.round((s.completed/total)*100):0}%</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:12px;background:var(--bg-2);border-radius:8px;">
+          <span style="color:var(--text-2);">Average Rating</span>
+          <strong>${parseFloat(s.average_rating||0).toFixed(1)} / 10</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:12px;background:var(--bg-2);border-radius:8px;">
+          <span style="color:var(--text-2);">Chapters / Manga</span>
+          <strong>${total>0?(s.total_chapters/total).toFixed(1):0} avg</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:12px;background:var(--bg-2);border-radius:8px;">
+          <span style="color:var(--text-2);">Dropped Rate</span>
+          <strong style="color:var(--red);">${total>0?Math.round((s.dropped/total)*100):0}%</strong>
+        </div>
+      </div>`;
+  } catch(err){}
+});
+
+async function exportLibrary() {
+  const res = await API.get('/api/library');
+  if (res.success) {
+    const blob = new Blob([JSON.stringify(res.data, null, 2)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `mangahub_library_${new Date().toISOString().slice(0,10)}.json`;
+    a.click(); Toast.success('Library exported!');
+  }
+}
+async function exportHistory() {
+  const res = await API.get('/api/history');
+  if (res.success) {
+    const blob = new Blob([JSON.stringify(res.data, null, 2)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `mangahub_history_${new Date().toISOString().slice(0,10)}.json`;
+    a.click(); Toast.success('History exported!');
+  }
+}
+</script>
+</body>
+</html>

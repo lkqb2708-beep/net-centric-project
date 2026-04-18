@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Manga Detail — MangaHub</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><div class="logo-icon">M</div><span class="logo-text">MangaHub</span></div>
+    <div style="flex:1;overflow-y:auto;padding-bottom:8px;">
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Main</div>
+        <div class="nav-item" data-href="/dashboard"><span class="nav-icon">🏠</span>Dashboard</div>
+        <div class="nav-item" data-href="/browse"><span class="nav-icon">🔍</span>Browse</div>
+        <div class="nav-item" data-href="/library"><span class="nav-icon">📚</span>My Library</div>
+        <div class="nav-item" data-href="/history"><span class="nav-icon">🕐</span>History</div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Community</div>
+        <div class="nav-item" data-href="/chat"><span class="nav-icon">💬</span>Chat</div>
+        <div class="nav-item" data-href="/notifications"><span class="nav-icon">🔔</span>Notifications<span class="nav-badge notif-badge hidden">0</span></div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Account</div>
+        <div class="nav-item" data-href="/stats"><span class="nav-icon">📊</span>Statistics</div>
+        <div class="nav-item" data-href="/settings"><span class="nav-icon">⚙️</span>Settings</div>
+        <div class="nav-item" data-href="/admin"><span class="nav-icon">🛡️</span>Admin</div>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-info" onclick="location.href='/settings'"><div class="user-avatar" data-user-avatar></div>
+        <div><div class="user-name" data-user-name>Loading...</div><div class="user-role" data-user-role>user</div></div>
+      </div>
+      <button id="logout-btn" class="btn btn-ghost btn-sm btn-full mt-8" style="color:var(--red);border-color:rgba(239,68,68,0.2);">🚪 Logout</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <button onclick="history.back()" class="btn btn-ghost btn-sm">← Back</button>
+      <div style="flex:1;padding-left:12px;"><h2 id="topbar-title" style="font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Manga Detail</h2></div>
+    </div>
+
+    <div id="detail-container" class="page-body">
+      <!-- Loading skeleton -->
+      <div style="display:flex;gap:32px;flex-wrap:wrap;">
+        <div class="skeleton" style="width:260px;height:380px;border-radius:12px;flex-shrink:0;"></div>
+        <div style="flex:1;min-width:200px;">
+          <div class="skeleton" style="height:36px;width:70%;border-radius:6px;margin-bottom:16px;"></div>
+          <div class="skeleton" style="height:18px;width:40%;border-radius:6px;margin-bottom:12px;"></div>
+          <div class="skeleton" style="height:100px;border-radius:6px;margin-bottom:16px;"></div>
+          <div class="skeleton" style="height:40px;width:200px;border-radius:6px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add to Library Modal -->
+<div class="modal-backdrop" id="add-modal" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Add to Library</h3>
+      <button class="modal-close" onclick="Modal.close('add-modal')">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="form-group">
+        <label class="form-label">Reading Status</label>
+        <select id="add-status" class="form-input">
+          <option value="plan_to_read">📌 Plan to Read</option>
+          <option value="reading">📖 Reading</option>
+          <option value="completed">✅ Completed</option>
+          <option value="on_hold">⏸ On Hold</option>
+          <option value="dropped">❌ Dropped</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn btn-ghost" onclick="Modal.close('add-modal')">Cancel</button>
+        <button class="btn btn-primary" id="confirm-add-btn" onclick="confirmAdd()">Add to Library</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="/static/js/mhub_main.js?v=1775507111480"></script>
+<script>
+let mangaID = '';
+let libraryEntryID = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // Get manga ID from URL path: /manga/{id}
+  const parts = location.pathname.split('/');
+  mangaID = parts[parts.length - 1];
+
+  if (!mangaID) { location.href = '/browse'; return; }
+
+  try {
+    const res = await API.get(`/api/manga/${mangaID}`);
+    if (!res.success) { document.getElementById('detail-container').innerHTML = '<div style="color:var(--text-3);padding:40px;text-align:center;"><h3>Manga not found</h3><a href="/browse" class="btn btn-primary mt-16">Back to Browse</a></div>'; return; }
+    renderDetail(res.data);
+  } catch(err){
+    document.getElementById('detail-container').innerHTML = '<div style="color:var(--text-3);padding:40px;">Error loading manga.</div>';
+  }
+
+  // Check if in library
+  if (Auth.isLoggedIn()) {
+    try {
+      const libRes = await API.get('/api/library');
+      if (libRes.success) {
+        const entry = (libRes.data||[]).find(e => e.manga_id === mangaID || e.manga?.id === mangaID);
+        if (entry) {
+          libraryEntryID = entry.id;
+          const btn = document.getElementById('library-btn');
+          if (btn) { btn.textContent = '✅ In Library'; btn.className = 'btn btn-secondary'; btn.onclick = () => Modal.open('progress-modal'); }
+        }
+      }
+    } catch(err){}
+  }
+});
+
+function renderDetail(m) {
+  document.getElementById('topbar-title').textContent = m.title;
+  document.title = `${m.title} — MangaHub`;
+  const cover = m.cover_url || '/static/img/placeholder.svg';
+
+  const genreTags = (m.genres||[]).map(g => `<span class="genre-tag">${g}</span>`).join('');
+  const stars = Array.from({length:5},(_,i)=>`<span class="star ${i<Math.round(m.rating/2)?'filled':''}">★</span>`).join('');
+
+  const loginPrompt = Auth.isLoggedIn() ? '' : `<a href="/login" class="btn btn-ghost" style="margin-left:8px;">Login to track</a>`;
+
+  document.getElementById('detail-container').innerHTML = `
+    <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start;">
+      <div style="flex-shrink:0;">
+        <img src="${cover}" alt="${m.title}" style="width:240px;border-radius:12px;box-shadow:var(--shadow-lg);" onerror="this.src='/static/img/placeholder.svg'">
+        <div style="display:flex;gap:8px;margin-top:12px;flex-direction:column;">
+          ${Auth.isLoggedIn() ? `<button id="library-btn" class="btn btn-primary btn-full" onclick="Modal.open('add-modal')">+ Add to Library</button>` : `<a href="/login" class="btn btn-primary btn-full">Login to Track</a>`}
+          <a href="/browse" class="btn btn-ghost btn-full">← Browse</a>
+        </div>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+          ${statusBadge(m.status)}
+          ${m.year ? `<span style="color:var(--text-3);font-size:13px;">${m.year}</span>` : ''}
+        </div>
+        <h1 style="font-size:clamp(22px,3vw,32px);font-weight:900;font-family:'Outfit',sans-serif;margin-bottom:8px;">${m.title}</h1>
+        <div style="color:var(--text-2);font-size:15px;margin-bottom:4px;">by <strong>${m.author}</strong>${m.artist && m.artist !== m.author ? ` · Art by ${m.artist}` : ''}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+          <div class="stars">${stars}</div>
+          <span style="font-weight:700;">${m.rating.toFixed(1)}</span>
+          <span style="color:var(--text-3);font-size:13px;">/ 10</span>
+        </div>
+        <div style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;">
+          <div style="text-align:center;"><div style="font-size:22px;font-weight:800;">${m.chapter_count||'?'}</div><div style="font-size:12px;color:var(--text-3);">Chapters</div></div>
+          <div style="width:1px;background:var(--border);"></div>
+          <div style="text-align:center;"><div style="font-size:22px;font-weight:800;">${m.volume_count||'?'}</div><div style="font-size:12px;color:var(--text-3);">Volumes</div></div>
+          <div style="width:1px;background:var(--border);"></div>
+          <div style="text-align:center;"><div style="font-size:22px;font-weight:800;">${m.popularity_rank||'-'}</div><div style="font-size:12px;color:var(--text-3);">Rank</div></div>
+        </div>
+        ${m.description ? `<div style="color:var(--text-2);font-size:14px;line-height:1.8;margin-bottom:20px;max-width:600px;">${m.description}</div>` : ''}
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">${genreTags}</div>
+      </div>
+    </div>`;
+}
+
+async function confirmAdd() {
+  if (!Auth.isLoggedIn()) { location.href = '/login'; return; }
+  const status = document.getElementById('add-status').value;
+  const btn = document.getElementById('confirm-add-btn');
+  btn.classList.add('loading'); btn.textContent = '';
+  const res = await API.post('/api/library', { manga_id: mangaID, status });
+  btn.classList.remove('loading'); btn.textContent = 'Add to Library';
+  if (res.success) {
+    libraryEntryID = res.data.id;
+    Toast.success('Added to your library!');
+    Modal.close('add-modal');
+    const lbtn = document.getElementById('library-btn');
+    if (lbtn) { lbtn.textContent = '✅ In Library'; lbtn.className = 'btn btn-secondary'; }
+  } else {
+    Toast.error(res.error || 'Failed to add to library');
+  }
+}
+</script>
+</body>
+</html>
