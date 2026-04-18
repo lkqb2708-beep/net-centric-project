@@ -60,41 +60,50 @@ mangahub/
 - **PostgreSQL 14+** — https://www.postgresql.org/download/
 - **pgAdmin 4** (optional) — https://www.pgadmin.org/
 
-### 1. Clone / open the project
-```
-cd "C:\Users\Dell\Desktop\NetCen Proj\mangahub"
+### 1. Clone the repository
+```bash
+git clone https://github.com/lkqb2708-beep/net-centric-project.git
+cd net-centric-project/mangahub
 ```
 
-### 2. Create the PostgreSQL database
-Open **psql** or **pgAdmin** and run:
+### 2. Configure environment
+Create a copy of `.env.example` and name it `.env`:
+```bash
+# Windows Command Prompt
+copy .env.example .env
+
+# Mac/Linux/Git Bash
+cp .env.example .env
+```
+*(The defaults in `.env` should work automatically if you use the database script below).*
+
+### 3. Create the Database
+Open **psql** or **pgAdmin** and run the following script to create the required database and user:
 ```sql
 CREATE USER mangahub WITH PASSWORD 'mangahub_password';
 CREATE DATABASE mangahub_db OWNER mangahub;
 GRANT ALL PRIVILEGES ON DATABASE mangahub_db TO mangahub;
 ```
+*(Note for Postgres 15+: You may need to run `GRANT ALL ON SCHEMA public TO mangahub;` inside the connected database).*
 
-### 3. Configure environment
-The `.env` file is already created with dev defaults. Edit if your DB credentials differ.
-
-### 4. Download Go dependencies
-```powershell
-# PowerShell (run in mangahub/ directory)
-& "C:\Program Files\Go\bin\go.exe" mod tidy
+### 4. Install Dependencies
+```bash
+go mod tidy
 ```
 
-### 5. Run migrations + seed data
-```powershell
-& "C:\Program Files\Go\bin\go.exe" run ./cmd/server -migrate
-& "C:\Program Files\Go\bin\go.exe" run ./cmd/server -seed
-```
-This creates all tables and inserts 35 manga + admin/demo accounts.
-
-### 6. Start the server
-```powershell
-& "C:\Program Files\Go\bin\go.exe" run ./cmd/server
+### 5. Run Migrations & Seed Data
+Initialize the database tables and insert 35 popular manga plus demo accounts:
+```bash
+go run ./cmd/server -migrate
+go run ./cmd/server -seed
 ```
 
-All four services start together:
+### 6. Start the Server
+```bash
+go run ./cmd/server
+```
+
+All four services start together dynamically:
 | Service | Port | Protocol |
 |---------|------|----------|
 | HTTP + WebSocket | 8080 | HTTP/WS |
@@ -102,7 +111,7 @@ All four services start together:
 | UDP Notify | 9002 | UDP |
 | gRPC | 9003 | gRPC |
 
-### 7. Open the app
+### 7. Open the App
 Navigate to → **http://localhost:8080**
 
 ---
@@ -220,13 +229,13 @@ grpcurl -plaintext localhost:9003 manga.MangaService/Ping
 
 ## 🧪 Testing
 
-```powershell
-& "C:\Program Files\Go\bin\go.exe" test ./... -v
+```bash
+go test ./... -v
 ```
 
 Test specific packages:
-```powershell
-& "C:\Program Files\Go\bin\go.exe" test ./internal/auth/... -v
+```bash
+go test ./internal/auth/... -v
 ```
 
 ---
