@@ -140,6 +140,9 @@ func (r *MangaRepository) scanManga(row interface{ Scan(...interface{}) error })
 		&m.ChapterCount, &m.VolumeCount,
 		&m.Description, &m.CoverURL,
 		&m.Year, &m.Rating, &m.PopularityRank,
+		&m.Format, &m.Franchise, &m.FranchisePart,
+		&m.ReadingURL, &m.ReadingSource, &m.ReadingRegion,
+		&m.MetaSource, &m.CoverSource, &m.SourceConfidence,
 		&m.CreatedAt, &m.UpdatedAt,
 	)
 	if err != nil {
@@ -151,7 +154,9 @@ func (r *MangaRepository) scanManga(row interface{ Scan(...interface{}) error })
 func (r *MangaRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Manga, error) {
 	row := r.db.QueryRowContext(ctx,
 		`SELECT id,title,author,artist,genres,status,chapter_count,volume_count,
-		        description,cover_url,year,rating,popularity_rank,created_at,updated_at
+		        description,cover_url,year,rating,popularity_rank,
+		        format,franchise,franchise_part,reading_url,reading_source,reading_region,
+		        meta_source,cover_source,source_confidence,created_at,updated_at
 		 FROM manga WHERE id=$1`, id)
 	m, err := r.scanManga(row)
 	if err == sql.ErrNoRows {
@@ -160,7 +165,7 @@ func (r *MangaRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Ma
 	return m, err
 }
 
-func (r *MangaRepository) Search(ctx context.Context, query, status, genre string, page, pageSize int) ([]*models.Manga, int, error) {
+func (r *MangaRepository) Search(ctx context.Context, query, status, genre, format, sort string, page, pageSize int) ([]*models.Manga, int, error) {
 	args := []interface{}{}
 	where := "WHERE 1=1"
 	i := 1
@@ -181,6 +186,11 @@ func (r *MangaRepository) Search(ctx context.Context, query, status, genre strin
 		args = append(args, genre)
 		i++
 	}
+	if format != "" {
+		where += fmt.Sprintf(" AND format=$%d", i)
+		args = append(args, format)
+		i++
+	}
 
 	// Count total
 	var total int
@@ -191,12 +201,23 @@ func (r *MangaRepository) Search(ctx context.Context, query, status, genre strin
 
 	offset := (page - 1) * pageSize
 	orderBy := " ORDER BY popularity_rank ASC, rating DESC"
+	switch sort {
+	case "rating":
+		orderBy = " ORDER BY rating DESC, popularity_rank ASC"
+	case "year":
+		orderBy = " ORDER BY year DESC, popularity_rank ASC"
+	case "title":
+		orderBy = " ORDER BY title ASC"
+	}
+
 	limitClause := fmt.Sprintf(" LIMIT $%d OFFSET $%d", i, i+1)
 	args = append(args, pageSize, offset)
 
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT id,title,author,artist,genres,status,chapter_count,volume_count,
-		        description,cover_url,year,rating,popularity_rank,created_at,updated_at
+		        description,cover_url,year,rating,popularity_rank,
+		        format,franchise,franchise_part,reading_url,reading_source,reading_region,
+		        meta_source,cover_source,source_confidence,created_at,updated_at
 		 FROM manga `+where+orderBy+limitClause, args...)
 	if err != nil {
 		return nil, 0, err
@@ -217,7 +238,9 @@ func (r *MangaRepository) Search(ctx context.Context, query, status, genre strin
 func (r *MangaRepository) GetPopular(ctx context.Context, limit int) ([]*models.Manga, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT id,title,author,artist,genres,status,chapter_count,volume_count,
-		        description,cover_url,year,rating,popularity_rank,created_at,updated_at
+		        description,cover_url,year,rating,popularity_rank,
+		        format,franchise,franchise_part,reading_url,reading_source,reading_region,
+		        meta_source,cover_source,source_confidence,created_at,updated_at
 		 FROM manga ORDER BY popularity_rank ASC, rating DESC LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
@@ -236,7 +259,7 @@ func (r *MangaRepository) GetPopular(ctx context.Context, limit int) ([]*models.
 }
 
 func (r *MangaRepository) GetAll(ctx context.Context, page, pageSize int) ([]*models.Manga, int, error) {
-	return r.Search(ctx, "", "", "", page, pageSize)
+	return r.Search(ctx, "", "", "", "", "", page, pageSize)
 }
 
 func (r *MangaRepository) Upsert(ctx context.Context, m *models.Manga) error {
@@ -245,20 +268,28 @@ func (r *MangaRepository) Upsert(ctx context.Context, m *models.Manga) error {
 	}
 	_, err := r.db.ExecContext(ctx,
 		`INSERT INTO manga (id,title,author,artist,genres,status,chapter_count,volume_count,
-		                    description,cover_url,year,rating,popularity_rank)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+		                    description,cover_url,year,rating,popularity_rank,
+		                    format,franchise,franchise_part,reading_url,reading_source,reading_region,
+		                    meta_source,cover_source,source_confidence)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
 		 ON CONFLICT (id) DO UPDATE SET
 		   title=EXCLUDED.title, author=EXCLUDED.author, artist=EXCLUDED.artist,
 		   genres=EXCLUDED.genres, status=EXCLUDED.status,
 		   chapter_count=EXCLUDED.chapter_count, volume_count=EXCLUDED.volume_count,
 		   description=EXCLUDED.description, cover_url=EXCLUDED.cover_url,
-		   year=EXCLUDED.year, rating=EXCLUDED.rating,
-		   popularity_rank=EXCLUDED.popularity_rank, updated_at=NOW()`,
+		   year=EXCLUDED.year, rating=EXCLUDED.rating, popularity_rank=EXCLUDED.popularity_rank,
+		   format=EXCLUDED.format, franchise=EXCLUDED.franchise, franchise_part=EXCLUDED.franchise_part,
+		   reading_url=EXCLUDED.reading_url, reading_source=EXCLUDED.reading_source, reading_region=EXCLUDED.reading_region,
+		   meta_source=EXCLUDED.meta_source, cover_source=EXCLUDED.cover_source, source_confidence=EXCLUDED.source_confidence,
+		   updated_at=NOW()`,
 		m.ID, m.Title, m.Author, m.Artist,
 		pq.Array(m.Genres), m.Status,
 		m.ChapterCount, m.VolumeCount,
 		m.Description, m.CoverURL,
 		m.Year, m.Rating, m.PopularityRank,
+		m.Format, m.Franchise, m.FranchisePart,
+		m.ReadingURL, m.ReadingSource, m.ReadingRegion,
+		m.MetaSource, m.CoverSource, m.SourceConfidence,
 	)
 	return err
 }

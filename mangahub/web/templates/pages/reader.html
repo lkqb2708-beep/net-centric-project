@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reader - MangaHub</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <style>
+        body { margin: 0; background-color: #000; color: #fff; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        .topbar { background: rgba(15,15,18,0.9); backdrop-filter: blur(10px); padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); z-index: 10; flex-shrink: 0; }
+        .reader-controls { display: flex; gap: 12px; align-items: center; }
+        select { background: #1a1a24; color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 6px; font-family: 'Inter', sans-serif; }
+        .viewer-container { flex: 1; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; align-items: center; padding: 20px 0; background: #000; }
+        canvas { max-width: 100%; height: auto; display: block; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .btn { cursor: pointer; padding: 6px 16px; border: none; border-radius: 6px; font-weight: 600; font-family: 'Inter', sans-serif; transition: all 0.2s; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-ghost { background: transparent; color: var(--text-2); border: 1px solid var(--border); }
+        .btn-ghost:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            .topbar { flex-direction: column; gap: 12px; padding: 12px; }
+            .reader-controls { flex-wrap: wrap; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="topbar">
+        <div>
+            <a href="javascript:history.back()" class="btn btn-ghost" style="text-decoration: none; display: inline-block;">← Back</a>
+            <span style="font-weight: 800; font-family: 'Outfit'; margin-left: 16px; font-size: 18px;" id="reader-title">JoJo's Bizarre Adventure</span>
+        </div>
+        <div class="reader-controls">
+            <select id="part-select" onchange="loadPart()">
+                <option value="part-1-phantom-blood">Part 1: Phantom Blood</option>
+                <option value="part-2-battle-tendency">Part 2: Battle Tendency</option>
+                <option value="part-3-stardust-crusaders">Part 3: Stardust Crusaders</option>
+                <option value="part-4-diamond-is-unbreakable">Part 4: Diamond is Unbreakable</option>
+                <option value="part-5-vento-aureo">Part 5: Vento Aureo</option>
+                <option value="part-6-stone-ocean">Part 6: Stone Ocean</option>
+                <option value="part-7-steel-ball-run">Part 7: Steel Ball Run</option>
+                <option value="part-8-jojolion">Part 8: JoJolion</option>
+            </select>
+            <select id="volume-select" onchange="loadVolume()">
+                <!-- Populated dynamically -->
+            </select>
+            <button class="btn btn-ghost" onclick="prevPage()">Prev Page</button>
+            <span id="page-indicator">0 / 0</span>
+            <button class="btn btn-ghost" onclick="nextPage()">Next Page</button>
+        </div>
+    </div>
+
+    <div class="viewer-container" id="viewer" tabindex="0">
+        <!-- Canvas renders here -->
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+        let pdfDoc = null;
+        let pageNum = 1;
+        let pageIsRendering = false;
+        let pageNumPending = null;
+        let scale = 1.5;
+
+        // Volumes mapping for each part
+        const volumesPerPart = {
+            "part-1-phantom-blood": 5,
+            "part-2-battle-tendency": 7,
+            "part-3-stardust-crusaders": 16,
+            "part-4-diamond-is-unbreakable": 18,
+            "part-5-vento-aureo": 17,
+            "part-6-stone-ocean": 17,
+            "part-7-steel-ball-run": 24,
+            "part-8-jojolion": 27
+        };
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        document.getElementById('viewer').appendChild(canvas);
+
+        function populateVolumes(part) {
+            const select = document.getElementById('volume-select');
+            select.innerHTML = '';
+            const numVols = volumesPerPart[part] || 1;
+            for(let i=1; i<=numVols; i++) {
+                const opt = document.createElement('option');
+                const volStr = i.toString().padStart(2, '0');
+                opt.value = volStr;
+                opt.textContent = `Volume ${i}`;
+                select.appendChild(opt);
+            }
+        }
+
+        function loadPart() {
+            const part = document.getElementById('part-select').value;
+            populateVolumes(part);
+            loadVolume();
+        }
+
+        async function loadVolume() {
+            const part = document.getElementById('part-select').value;
+            const vol = document.getElementById('volume-select').value;
+            const url = `/static/manga/jojo/${part}/vol-${vol}.pdf`;
+            
+            document.getElementById('page-indicator').textContent = 'Loading...';
+            
+            try {
+                pdfDoc = await pdfjsLib.getDocument(url).promise;
+                pageNum = 1;
+                renderPage(pageNum);
+            } catch (err) {
+                console.error("Error loading PDF:", err);
+                document.getElementById('page-indicator').textContent = 'Error loading volume';
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+            }
+        }
+
+        function renderPage(num) {
+            pageIsRendering = true;
+            pdfDoc.getPage(num).then(page => {
+                // Determine scale based on container width
+                const containerWidth = document.getElementById('viewer').clientWidth;
+                const unscaledViewport = page.getViewport({ scale: 1 });
+                // Target width is either window width or 800px max for better reading
+                const targetWidth = Math.min(containerWidth - 40, 900); 
+                const responsiveScale = targetWidth / unscaledViewport.width;
+                
+                const viewport = page.getViewport({ scale: responsiveScale });
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                const renderCtx = { canvasContext: ctx, viewport: viewport };
+                page.render(renderCtx).promise.then(() => {
+                    pageIsRendering = false;
+                    if(pageNumPending !== null) {
+                        renderPage(pageNumPending);
+                        pageNumPending = null;
+                    }
+                });
+
+                document.getElementById('page-indicator').textContent = `${num} / ${pdfDoc.numPages}`;
+                // Scroll to top
+                document.getElementById('viewer').scrollTop = 0;
+            });
+        }
+
+        function queueRenderPage(num) {
+            if(pageIsRendering) {
+                pageNumPending = num;
+            } else {
+                renderPage(num);
+            }
+        }
+
+        function prevPage() {
+            if(pageNum <= 1) return;
+            pageNum--;
+            queueRenderPage(pageNum);
+        }
+
+        function nextPage() {
+            if(pageNum >= pdfDoc.numPages) return;
+            pageNum++;
+            queueRenderPage(pageNum);
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'ArrowRight' || e.key === 'd') nextPage();
+            if(e.key === 'ArrowLeft' || e.key === 'a') prevPage();
+        });
+
+        // Initialize
+        loadPart();
+        
+        // Handle window resize
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (pdfDoc) queueRenderPage(pageNum);
+            }, 200);
+        });
+    </script>
+</body>
+</html>

@@ -59,6 +59,24 @@
             </div>
           </div>
           <div>
+            <select id="sort-select" class="form-input" style="width:130px;" onchange="loadManga()">
+              <option value="popularity">🔥 Popularity</option>
+              <option value="rating">⭐ Rating</option>
+              <option value="year">📅 Newest</option>
+              <option value="title">A-Z</option>
+            </select>
+          </div>
+          <div>
+            <select id="format-filter" class="form-input" style="width:140px;" onchange="loadManga()">
+              <option value="">All Formats</option>
+              <option value="manga">Manga (JP)</option>
+              <option value="manhwa">Manhwa (KR)</option>
+              <option value="manhua">Manhua (CN)</option>
+              <option value="light_novel">Light Novel</option>
+              <option value="one_shot">One Shot</option>
+            </select>
+          </div>
+          <div>
             <select id="status-filter" class="form-input" style="width:150px;" onchange="loadManga()">
               <option value="">All Status</option>
               <option value="ongoing">Ongoing</option>
@@ -99,7 +117,7 @@
 
 <div id="toast-container" class="toast-container"></div>
 
-<script src="/static/js/mhub_main.js?v=1775507111480"></script>
+<script src="/static/js/mhub_main.js?v=2"></script>
 
 
 <script>
@@ -112,6 +130,8 @@ async function loadManga(page = 1) {
   const q      = document.getElementById('search-input').value.trim();
   const status = document.getElementById('status-filter').value;
   const genre  = document.getElementById('genre-filter').value;
+  const format = document.getElementById('format-filter').value;
+  const sort   = document.getElementById('sort-select').value;
 
   const grid = document.getElementById('manga-grid');
   grid.innerHTML = skeletonMangaCards(12);
@@ -120,6 +140,8 @@ async function loadManga(page = 1) {
   if (q)      params.set('q', q);
   if (status) params.set('status', status);
   if (genre)  params.set('genre', genre);
+  if (format) params.set('format', format);
+  if (sort)   params.set('sort', sort);
 
   try {
     const res = await API.get(`/api/manga?${params}`);
@@ -167,6 +189,8 @@ function clearFilters() {
   document.getElementById('search-input').value = '';
   document.getElementById('status-filter').value = '';
   document.getElementById('genre-filter').value = '';
+  document.getElementById('format-filter').value = '';
+  document.getElementById('sort-select').value = 'popularity';
   loadManga(1);
 }
 

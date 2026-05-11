@@ -23,6 +23,8 @@ func (h *MangaHandler) List(w http.ResponseWriter, r *http.Request) {
 	query := q.Get("q")
 	status := q.Get("status")
 	genre := q.Get("genre")
+	format := q.Get("format")
+	sort := q.Get("sort")
 	page, _ := strconv.Atoi(q.Get("page"))
 	pageSize, _ := strconv.Atoi(q.Get("page_size"))
 	if page < 1 {
@@ -32,7 +34,7 @@ func (h *MangaHandler) List(w http.ResponseWriter, r *http.Request) {
 		pageSize = 20
 	}
 
-	manga, total, err := h.manga.Search(r.Context(), query, status, genre, page, pageSize)
+	manga, total, err := h.manga.Search(r.Context(), query, status, genre, format, sort, page, pageSize)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "failed to fetch manga")
 		return

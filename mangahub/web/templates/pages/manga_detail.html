@@ -87,7 +87,7 @@
 </div>
 
 <div id="toast-container" class="toast-container"></div>
-<script src="/static/js/mhub_main.js?v=1775507111480"></script>
+<script src="/static/js/mhub_main.js?v=2"></script>
 <script>
 let mangaID = '';
 let libraryEntryID = null;
@@ -126,12 +126,42 @@ document.addEventListener('DOMContentLoaded', async () => {
 function renderDetail(m) {
   document.getElementById('topbar-title').textContent = m.title;
   document.title = `${m.title} — MangaHub`;
-  const cover = m.cover_url || '/static/img/placeholder.svg';
+  const cover = getProxyUrl(m.cover_url);
 
   const genreTags = (m.genres||[]).map(g => `<span class="genre-tag">${g}</span>`).join('');
   const stars = Array.from({length:5},(_,i)=>`<span class="star ${i<Math.round(m.rating/2)?'filled':''}">★</span>`).join('');
 
   const loginPrompt = Auth.isLoggedIn() ? '' : `<a href="/login" class="btn btn-ghost" style="margin-left:8px;">Login to track</a>`;
+
+  const formatColors = {
+    manga: 'var(--blue)', manhwa: 'var(--green)', manhua: 'var(--accent-3)', light_novel: 'var(--purple)', one_shot: 'var(--text-2)'
+  };
+  const formatColor = formatColors[m.format] || 'var(--blue)';
+  
+  let readingBtn = '';
+  let partsList = '';
+  if (m.reading_source === 'Local PDF') {
+    readingBtn = `<span style="font-size:12px; color:var(--text-3);"><span style="color:var(--green)">📖</span> Local Reader Available</span>`;
+    partsList = `
+      <div style="margin-top:20px; padding-top:16px; border-top:1px dashed var(--border);">
+        <h4 style="margin-top:0; margin-bottom:12px; font-size:14px; color:var(--text-2);">Read Available Parts:</h4>
+        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+          <button onclick="openReaderAtPart('part-1-phantom-blood')" class="btn btn-sm" style="background:var(--bg-3); border:1px solid var(--border); color:var(--text-1);">Part 1: Phantom Blood</button>
+          <button onclick="openReaderAtPart('part-2-battle-tendency')" class="btn btn-sm" style="background:var(--bg-3); border:1px solid var(--border); color:var(--text-1);">Part 2: Battle Tendency</button>
+          <button onclick="openReaderAtPart('part-3-stardust-crusaders')" class="btn btn-sm" style="background:var(--bg-3); border:1px solid var(--border); color:var(--text-1);">Part 3: Stardust Crusaders</button>
+          <button onclick="openReaderAtPart('part-4-diamond-is-unbreakable')" class="btn btn-sm" style="background:var(--bg-3); border:1px solid var(--border); color:var(--text-1);">Part 4: Diamond is Unbreakable</button>
+          <button onclick="openReaderAtPart('part-5-vento-aureo')" class="btn btn-sm" style="background:var(--bg-3); border:1px solid var(--border); color:var(--text-1);">Part 5: Vento Aureo</button>
+          <button onclick="openReaderAtPart('part-6-stone-ocean')" class="btn btn-sm" style="background:var(--bg-3); border:1px solid var(--border); color:var(--text-1);">Part 6: Stone Ocean</button>
+          <button onclick="openReaderAtPart('part-7-steel-ball-run')" class="btn btn-sm" style="background:var(--bg-3); border:1px solid var(--border); color:var(--text-1);">Part 7: Steel Ball Run</button>
+          <button onclick="openReaderAtPart('part-8-jojolion')" class="btn btn-sm" style="background:var(--bg-3); border:1px solid var(--border); color:var(--text-1);">Part 8: JoJolion</button>
+        </div>
+      </div>
+    `;
+  } else if (m.reading_url && m.reading_source !== 'Unavailable') {
+    readingBtn = `<a href="${m.reading_url}" target="_blank" class="btn btn-sm" style="background:var(--bg-3); border:1px solid var(--border); color:var(--text-1);"><span style="color:var(--green)">📖</span> Read on ${m.reading_source}</a>`;
+  } else {
+    readingBtn = `<button class="btn btn-sm" disabled style="background:var(--bg-2); border:1px solid var(--border); color:var(--text-3); cursor:not-allowed;">Read Unavailable</button>`;
+  }
 
   document.getElementById('detail-container').innerHTML = `
     <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start;">
@@ -141,13 +171,20 @@ function renderDetail(m) {
           ${Auth.isLoggedIn() ? `<button id="library-btn" class="btn btn-primary btn-full" onclick="Modal.open('add-modal')">+ Add to Library</button>` : `<a href="/login" class="btn btn-primary btn-full">Login to Track</a>`}
           <a href="/browse" class="btn btn-ghost btn-full">← Browse</a>
         </div>
+        <div style="margin-top:16px; font-size:11px; color:var(--text-3); text-align:center;">
+          Metadata: <strong>${m.meta_source}</strong> <br/>
+          Covers: <strong>${m.cover_source}</strong>
+        </div>
       </div>
       <div style="flex:1;min-width:200px;">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
           ${statusBadge(m.status)}
+          <span style="background:rgba(0,0,0,0.4); color:${formatColor}; font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; text-transform:uppercase; border:1px solid ${formatColor};">${m.format.replace('_', ' ')}</span>
           ${m.year ? `<span style="color:var(--text-3);font-size:13px;">${m.year}</span>` : ''}
+          <div style="margin-left:auto;">${readingBtn}</div>
         </div>
-        <h1 style="font-size:clamp(22px,3vw,32px);font-weight:900;font-family:'Outfit',sans-serif;margin-bottom:8px;">${m.title}</h1>
+        <h1 style="font-size:clamp(22px,3vw,32px);font-weight:900;font-family:'Outfit',sans-serif;margin-bottom:4px;">${m.title}</h1>
+        ${m.franchise ? `<div style="font-size:13px; color:var(--accent-2); font-weight:600; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Franchise: ${m.franchise} ${m.franchise_part ? `(Part ${m.franchise_part})` : ''}</div>` : ''}
         <div style="color:var(--text-2);font-size:15px;margin-bottom:4px;">by <strong>${m.author}</strong>${m.artist && m.artist !== m.author ? ` · Art by ${m.artist}` : ''}</div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
           <div class="stars">${stars}</div>
@@ -155,7 +192,7 @@ function renderDetail(m) {
           <span style="color:var(--text-3);font-size:13px;">/ 10</span>
         </div>
         <div style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;">
-          <div style="text-align:center;"><div style="font-size:22px;font-weight:800;">${m.chapter_count||'?'}</div><div style="font-size:12px;color:var(--text-3);">Chapters</div></div>
+          <div style="text-align:center;"><div style="font-size:22px;font-weight:800;">${m.chapter_count||'?'}</div><div style="font-size:12px;color:var(--text-3);">${m.format === 'light_novel' ? 'Web Chapters' : 'Chapters'}</div></div>
           <div style="width:1px;background:var(--border);"></div>
           <div style="text-align:center;"><div style="font-size:22px;font-weight:800;">${m.volume_count||'?'}</div><div style="font-size:12px;color:var(--text-3);">Volumes</div></div>
           <div style="width:1px;background:var(--border);"></div>
@@ -163,6 +200,34 @@ function renderDetail(m) {
         </div>
         ${m.description ? `<div style="color:var(--text-2);font-size:14px;line-height:1.8;margin-bottom:20px;max-width:600px;">${m.description}</div>` : ''}
         <div style="display:flex;flex-wrap:wrap;gap:6px;">${genreTags}</div>
+        ${partsList}
+      </div>
+    </div>
+    
+    <!-- Inline Reader Container (Hidden by default) -->
+    <div id="inline-reader" style="display:none; margin-top:40px; border-top:1px solid var(--border); padding-top:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:var(--bg-2); padding:12px; border-radius:8px;">
+        <h3 style="margin:0;">Manga Reader</h3>
+        <div style="display:flex; gap:12px; align-items:center;">
+          <select id="reader-part" class="form-input" style="padding:6px; height:auto; background:var(--bg-3);" onchange="readerLoadPart()">
+            <option value="part-1-phantom-blood">Part 1: Phantom Blood</option>
+            <option value="part-2-battle-tendency">Part 2: Battle Tendency</option>
+            <option value="part-3-stardust-crusaders">Part 3: Stardust Crusaders</option>
+            <option value="part-4-diamond-is-unbreakable">Part 4: Diamond is Unbreakable</option>
+            <option value="part-5-vento-aureo">Part 5: Vento Aureo</option>
+            <option value="part-6-stone-ocean">Part 6: Stone Ocean</option>
+            <option value="part-7-steel-ball-run">Part 7: Steel Ball Run</option>
+            <option value="part-8-jojolion">Part 8: JoJolion</option>
+          </select>
+          <select id="reader-volume" class="form-input" style="padding:6px; height:auto; background:var(--bg-3);" onchange="readerLoadVolume()"></select>
+          <button class="btn btn-ghost btn-sm" onclick="readerPrev()">←</button>
+          <span id="reader-page" style="font-family:monospace; min-width:50px; text-align:center;">0/0</span>
+          <button class="btn btn-ghost btn-sm" onclick="readerNext()">→</button>
+          <button class="btn btn-ghost btn-sm" onclick="closeInlineReader()" style="color:var(--red);">✕ Close</button>
+        </div>
+      </div>
+      <div id="reader-viewer" style="width:100%; min-height:600px; background:#000; border-radius:8px; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; align-items:center; padding:20px 0;">
+        <canvas id="reader-canvas" style="max-width:100%; box-shadow:0 10px 25px rgba(0,0,0,0.8);"></canvas>
       </div>
     </div>`;
 }
@@ -184,6 +249,170 @@ async function confirmAdd() {
     Toast.error(res.error || 'Failed to add to library');
   }
 }
+// --- INLINE READER LOGIC ---
+let pdfDoc = null;
+let pageNum = 1;
+let pageIsRendering = false;
+let pageNumPending = null;
+
+const volumesPerPart = {
+  "part-1-phantom-blood": { start: 1, end: 5 },
+  "part-2-battle-tendency": { start: 6, end: 12 },
+  "part-3-stardust-crusaders": { start: 13, end: 28 },
+  "part-4-diamond-is-unbreakable": { start: 29, end: 46 },
+  "part-5-vento-aureo": { start: 47, end: 63 },
+  "part-6-stone-ocean": { start: 64, end: 80 },
+  "part-7-steel-ball-run": { start: 1, end: 24 },
+  "part-8-jojolion": { start: 1, end: 27 }
+};
+
+function openReaderAtPart(startPart = null) {
+  const reader = document.getElementById('inline-reader');
+  reader.style.display = 'block';
+  
+  if (startPart) {
+    document.getElementById('reader-part').value = startPart;
+  }
+  
+  // Load pdf.js dynamically if not already loaded
+  if (typeof pdfjsLib === 'undefined') {
+    const script = document.createElement('script');
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js";
+    script.onload = () => {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+      readerLoadPart(); // init
+    };
+    document.head.appendChild(script);
+  } else {
+    readerLoadPart();
+  }
+  
+  // Scroll down to reader
+  reader.scrollIntoView({behavior: 'smooth'});
+}
+
+function closeInlineReader() {
+  document.getElementById('inline-reader').style.display = 'none';
+}
+
+function readerLoadPart() {
+  const part = document.getElementById('reader-part').value;
+  const select = document.getElementById('reader-volume');
+  select.innerHTML = '';
+  
+  const range = volumesPerPart[part] || { start: 1, end: 1 };
+  
+  for(let i = range.start; i <= range.end; i++) {
+    const opt = document.createElement('option');
+    opt.value = i.toString().padStart(2, '0');
+    opt.textContent = `Volume ${i}`;
+    select.appendChild(opt);
+  }
+  readerLoadVolume();
+}
+
+async function readerLoadVolume() {
+  const part = document.getElementById('reader-part').value;
+  const vol = document.getElementById('reader-volume').value;
+  const url = `/static/manga/jojo/${part}/vol-${vol}.pdf`;
+  
+  document.getElementById('reader-page').textContent = '...';
+  
+  try {
+    pdfDoc = await pdfjsLib.getDocument(url).promise;
+    pageNum = 1;
+    readerRenderPage(pageNum);
+  } catch (err) {
+    console.error("Error loading PDF:", err);
+    document.getElementById('reader-page').textContent = 'Err';
+    const canvas = document.getElementById('reader-canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+}
+
+function readerRenderPage(num) {
+  pageIsRendering = true;
+  pdfDoc.getPage(num).then(page => {
+    const viewer = document.getElementById('reader-viewer');
+    const containerWidth = viewer.clientWidth;
+    const unscaledViewport = page.getViewport({ scale: 1 });
+    
+    // Calculate scale to fit width
+    const scaleWidth = (containerWidth - 40) / unscaledViewport.width;
+    
+    // Calculate scale to fit height (window height minus reader controls/padding)
+    const scaleHeight = (window.innerHeight - 180) / unscaledViewport.height;
+    
+    // Use the smaller scale so it fits entirely on screen
+    const responsiveScale = Math.min(scaleWidth, scaleHeight);
+    
+    const canvas = document.getElementById('reader-canvas');
+    const ctx = canvas.getContext('2d');
+    const viewport = page.getViewport({ scale: responsiveScale });
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+
+    const renderCtx = { canvasContext: ctx, viewport: viewport };
+    page.render(renderCtx).promise.then(() => {
+      pageIsRendering = false;
+      if(pageNumPending !== null) {
+        readerRenderPage(pageNumPending);
+        pageNumPending = null;
+      }
+    });
+
+    document.getElementById('reader-page').textContent = `${num}/${pdfDoc.numPages}`;
+    document.getElementById('reader-viewer').scrollTop = 0;
+  });
+}
+
+function queueRenderPage(num) {
+  if(pageIsRendering) {
+    pageNumPending = num;
+  } else {
+    readerRenderPage(num);
+  }
+}
+
+function readerPrev() {
+  if(pageNum <= 1 || !pdfDoc) return;
+  pageNum--;
+  queueRenderPage(pageNum);
+}
+
+function readerNext() {
+  if(!pdfDoc || pageNum >= pdfDoc.numPages) return;
+  pageNum++;
+  queueRenderPage(pageNum);
+}
+
+document.addEventListener('keydown', (e) => {
+  const reader = document.getElementById('inline-reader');
+  if (reader && reader.style.display === 'block') {
+    if(e.key === 'ArrowRight' || e.key === 'd') readerNext();
+    if(e.key === 'ArrowLeft' || e.key === 'a') readerPrev();
+  }
+});
+
+// Click navigation: Left side of screen = Prev, Right side = Next
+document.getElementById('detail-container').addEventListener('click', (e) => {
+  const viewer = document.getElementById('reader-viewer');
+  // Only trigger if reader is open and click is inside the viewer area
+  if (viewer && document.getElementById('inline-reader').style.display === 'block') {
+    if (viewer.contains(e.target)) {
+      const rect = viewer.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      
+      // If clicking on the left 50% of the viewer
+      if (clickX < rect.width / 2) {
+        readerPrev();
+      } else {
+        readerNext();
+      }
+    }
+  }
+});
 </script>
 </body>
 </html>

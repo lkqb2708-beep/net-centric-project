@@ -118,7 +118,7 @@
 </div>
 
 <div id="toast-container" class="toast-container"></div>
-<script src="/static/js/mhub_main.js?v=1775507111480"></script>
+<script src="/static/js/mhub_main.js?v=2"></script>
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
   if (!Auth.guard()) return;
@@ -176,9 +176,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         el.innerHTML = entries.slice(0, 5).map(e => {
           const m = e.manga;
           const pct = m.chapter_count > 0 ? Math.round((e.current_chapter / m.chapter_count) * 100) : 0;
+          const cover = getProxyUrl(m.cover_url);
           return `
           <div class="activity-item" style="padding:12px;background:var(--bg-2);border-radius:8px;margin-bottom:8px;cursor:pointer;" onclick="location.href='/manga/${m.id}'">
-            <img src="${m.cover_url||'/static/img/placeholder.svg'}" style="width:44px;height:60px;object-fit:cover;border-radius:4px;flex-shrink:0;" onerror="this.src='/static/img/placeholder.svg'">
+            <img src="${cover}" style="width:44px;height:60px;object-fit:cover;border-radius:4px;flex-shrink:0;" onerror="this.src='/static/img/placeholder.svg'">
             <div style="flex:1;min-width:0;">
               <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.title}</div>
               <div style="font-size:12px;color:var(--text-2);margin:2px 0;">Ch.${e.current_chapter} / ${m.chapter_count||'?'}</div>

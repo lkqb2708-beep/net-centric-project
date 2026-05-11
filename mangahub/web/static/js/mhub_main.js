@@ -57,7 +57,7 @@ const API = {
   },
 
   setUser(u) { if (u) localStorage.setItem('mh_user', JSON.stringify(u)); },
-  getUser()  { try { return JSON.parse(localStorage.getItem('mh_user')); } catch (e) { return null; } },
+  getUser() { try { return JSON.parse(localStorage.getItem('mh_user')); } catch (e) { return null; } },
 };
 window.API = API; // Export early
 
@@ -78,7 +78,7 @@ const Toast = {
     const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
     const t = document.createElement('div');
     t.className = `toast toast-${type}`;
-    t.innerHTML = `<span class="toast-icon">${icons[type]||'📢'}</span>
+    t.innerHTML = `<span class="toast-icon">${icons[type] || '📢'}</span>
                    <span class="toast-msg">${msg}</span>`;
     this.container.appendChild(t);
     setTimeout(() => {
@@ -88,8 +88,8 @@ const Toast = {
   },
 
   success(m) { this.show(m, 'success'); },
-  error(m)   { this.show(m, 'error',   4000); },
-  info(m)    { this.show(m, 'info'); },
+  error(m) { this.show(m, 'error', 4000); },
+  info(m) { this.show(m, 'info'); },
 };
 
 /* ─── Auth helpers ─────────────────────────────────────────────────────── */
@@ -157,7 +157,7 @@ const WS = {
       try {
         const evt = JSON.parse(e.data);
         this.emit(evt.type, evt.payload);
-      } catch (e) {}
+      } catch (e) { }
     };
 
     this.conn.onclose = () => {
@@ -202,7 +202,7 @@ const Nav = {
 
     // Mobile sidebar toggle
     const toggleBtn = document.getElementById('sidebar-toggle');
-    const sidebar   = document.getElementById('sidebar');
+    const sidebar = document.getElementById('sidebar');
     if (toggleBtn && sidebar) {
       toggleBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
       document.addEventListener('click', (e) => {
@@ -238,7 +238,7 @@ const Nav = {
             el.classList.remove('hidden');
           });
         }
-      }).catch(() => {});
+      }).catch(() => { });
     }
   },
 };
@@ -288,15 +288,15 @@ function renderStars(rating, max = 10) {
 /* ─── Status badge ─────────────────────────────────────────────────────── */
 function statusBadge(status) {
   const map = {
-    reading:     ['badge-reading',   '📖 Reading'],
-    completed:   ['badge-completed', '✅ Completed'],
-    plan_to_read:['badge-plan',      '📌 Plan to Read'],
-    on_hold:     ['badge-on_hold',   '⏸ On Hold'],
-    dropped:     ['badge-dropped',   '❌ Dropped'],
-    ongoing:     ['badge-ongoing',   '🔄 Ongoing'],
-    hiatus:      ['badge-hiatus',    '⏸ Hiatus'],
+    reading: ['badge-reading', '📖 Reading'],
+    completed: ['badge-completed', '✅ Completed'],
+    plan_to_read: ['badge-plan', '📌 Plan to Read'],
+    on_hold: ['badge-on_hold', '⏸ On Hold'],
+    dropped: ['badge-dropped', '❌ Dropped'],
+    ongoing: ['badge-ongoing', '🔄 Ongoing'],
+    hiatus: ['badge-hiatus', '⏸ Hiatus'],
     completed_m: ['badge-completed', '✅ Completed'],
-    cancelled:   ['badge-dropped',   '🚫 Cancelled'],
+    cancelled: ['badge-dropped', '🚫 Cancelled'],
   };
   const [cls, label] = map[status] || ['', status];
   return `<span class="badge ${cls}">${label}</span>`;
@@ -306,7 +306,7 @@ function statusBadge(status) {
 function initTabs(containerId) {
   const container = document.getElementById(containerId);
   if (!container) return;
-  const tabs   = container.querySelectorAll('.tab-btn');
+  const tabs = container.querySelectorAll('.tab-btn');
   const panels = container.querySelectorAll('.tab-panel');
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
@@ -319,6 +319,12 @@ function initTabs(containerId) {
 }
 
 /* ─── Format helpers ───────────────────────────────────────────────────── */
+function getProxyUrl(url) {
+  if (!url) return '/static/img/placeholder.svg';
+  // Return URL directly - cdn.myanimelist.net images load without a proxy
+  return url;
+}
+
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr);
   const s = Math.floor(diff / 1000);
@@ -337,16 +343,23 @@ function formatDate(dateStr) {
 
 /* ─── Global Manga Card Renderer ───────────────────────────────────────── */
 function renderMangaCard(m) {
-  const cover = m.cover_url || '/static/img/placeholder.svg';
+  const cover = getProxyUrl(m.cover_url);
+  const formatColors = {
+    manga: 'var(--blue)', manhwa: 'var(--green)', manhua: 'var(--accent-3)', light_novel: 'var(--purple)', one_shot: 'var(--text-2)'
+  };
+  const formatColor = formatColors[m.format] || 'var(--blue)';
+
   return `
   <div class="manga-card" onclick="location.href='/manga/${m.id}'" id="manga-${m.id}">
     <div style="position:relative;overflow:hidden;">
       <img class="manga-card-cover" src="${cover}" alt="${m.title}"
            onerror="this.onerror=null; this.src='/static/img/placeholder.svg';" loading="lazy">
       <span class="manga-card-badge">${m.status === 'completed' ? '✅' : '🔄'}</span>
+      <span class="manga-card-format" style="position:absolute; top:8px; left:8px; background:rgba(0,0,0,0.7); color:${formatColor}; font-size:10px; font-weight:700; padding:3px 7px; border-radius:4px; text-transform:uppercase; border:1px solid ${formatColor}; backdrop-filter:blur(4px);">${m.format.replace('_', ' ')}</span>
       <div class="manga-card-overlay">
         <div class="manga-card-title">${m.title}</div>
-        <div class="manga-card-meta">★ ${m.rating} · Ch.${m.chapter_count}</div>
+        ${m.franchise ? `<div style="font-size:10px; color:var(--text-3); margin-bottom:2px; text-transform:uppercase; letter-spacing:0.5px;">${m.franchise}</div>` : ''}
+        <div class="manga-card-meta">★ ${m.rating} · ${m.format === 'light_novel' ? `Vol.${m.volume_count}` : `Ch.${m.chapter_count}`}</div>
       </div>
     </div>
   </div>`;
@@ -398,6 +411,7 @@ window.Modal = Modal;
 window.renderMangaCard = renderMangaCard;
 window.statusBadge = (s) => (s === 'ongoing' ? '🔄' : '✅');
 window.renderStars = (r) => '★ ' + (r || 0);
+window.getProxyUrl = getProxyUrl;
 window.timeAgo = timeAgo;
 window.formatDate = formatDate;
 window.skeletonMangaCards = skeletonMangaCards;

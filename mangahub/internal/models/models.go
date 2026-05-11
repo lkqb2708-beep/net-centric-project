@@ -45,21 +45,33 @@ type Session struct {
 // ─── Manga ─────────────────────────────────────────────────────────────────
 
 type Manga struct {
-	ID           uuid.UUID `json:"id" db:"id"`
-	Title        string    `json:"title" db:"title"`
-	Author       string    `json:"author" db:"author"`
-	Artist       string    `json:"artist" db:"artist"`
-	Genres       []string  `json:"genres" db:"genres"`
-	Status       string    `json:"status" db:"status"` // ongoing | completed | hiatus | cancelled
-	ChapterCount int       `json:"chapter_count" db:"chapter_count"`
-	VolumeCount  int       `json:"volume_count" db:"volume_count"`
-	Description  string    `json:"description" db:"description"`
-	CoverURL     string    `json:"cover_url" db:"cover_url"`
-	Year         int       `json:"year" db:"year"`
-	Rating       float64   `json:"rating" db:"rating"`
-	PopularityRank int     `json:"popularity_rank" db:"popularity_rank"`
-	CreatedAt    time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
+	ID             uuid.UUID `json:"id" db:"id"`
+	Title          string    `json:"title" db:"title"`
+	Author         string    `json:"author" db:"author"`
+	Artist         string    `json:"artist" db:"artist"`
+	Genres         []string  `json:"genres" db:"genres"`
+	Status         string    `json:"status" db:"status"` // ongoing | completed | hiatus | cancelled
+	ChapterCount   int       `json:"chapter_count" db:"chapter_count"`
+	VolumeCount    int       `json:"volume_count" db:"volume_count"`
+	Description    string    `json:"description" db:"description"`
+	CoverURL       string    `json:"cover_url" db:"cover_url"`
+	Year           int       `json:"year" db:"year"`
+	Rating         float64   `json:"rating" db:"rating"`
+	PopularityRank int       `json:"popularity_rank" db:"popularity_rank"`
+	
+	// New fields from 009 migration
+	Format           string `json:"format" db:"format"`
+	Franchise        string `json:"franchise" db:"franchise"`
+	FranchisePart    int    `json:"franchise_part" db:"franchise_part"`
+	ReadingURL       string `json:"reading_url" db:"reading_url"`
+	ReadingSource    string `json:"reading_source" db:"reading_source"`
+	ReadingRegion    string `json:"reading_region" db:"reading_region"`
+	MetaSource       string `json:"meta_source" db:"meta_source"`
+	CoverSource      string `json:"cover_source" db:"cover_source"`
+	SourceConfidence string `json:"source_confidence" db:"source_confidence"`
+
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // ─── Library Entry ─────────────────────────────────────────────────────────

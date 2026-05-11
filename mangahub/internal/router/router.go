@@ -54,6 +54,7 @@ func New(db *sql.DB, hub *realtime.Hub) http.Handler {
 	r.Get("/dashboard", serveTemplate("web/templates/pages/dashboard.html"))
 	r.Get("/browse", serveTemplate("web/templates/pages/browse.html"))
 	r.Get("/manga/{id}", serveTemplate("web/templates/pages/manga_detail.html"))
+	r.Get("/read/{manga_slug}", serveTemplate("web/templates/pages/reader.html"))
 	r.Get("/library", serveTemplate("web/templates/pages/library.html"))
 	r.Get("/history", serveTemplate("web/templates/pages/history.html"))
 	r.Get("/chat", serveTemplate("web/templates/pages/chat.html"))

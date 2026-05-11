@@ -61,6 +61,7 @@ func main() {
 		os.Exit(0)
 	}
 
+
 	// Start WebSocket hub
 	hub := realtime.NewHub()
 

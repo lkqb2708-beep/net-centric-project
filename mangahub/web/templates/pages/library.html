@@ -111,7 +111,7 @@
 </div>
 
 <div id="toast-container" class="toast-container"></div>
-<script src="/static/js/mhub_main.js?v=1775507111480"></script>
+<script src="/static/js/mhub_main.js?v=2"></script>
 <script>
 let activeFilter = new URLSearchParams(location.search).get('status') || '';
 
@@ -150,7 +150,7 @@ async function loadLibrary() {
 function renderLibraryItem(e) {
   const m = e.manga;
   const pct = m.chapter_count > 0 ? Math.min(100, Math.round((e.current_chapter / m.chapter_count) * 100)) : 0;
-  const cover = m.cover_url || '/static/img/placeholder.svg';
+  const cover = getProxyUrl(m.cover_url);
   return `<div class="card" style="display:flex;gap:16px;align-items:center;">
     <img src="${cover}" style="width:56px;height:76px;object-fit:cover;border-radius:6px;flex-shrink:0;cursor:pointer;" onclick="location.href='/manga/${m.id}'" onerror="this.src='/static/img/placeholder.svg'">
     <div style="flex:1;min-width:0;">
