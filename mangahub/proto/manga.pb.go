@@ -8,7 +8,7 @@ import (
 	"context"
 	"google.golang.org/grpc"
 )
-
+//opensource
 // ─── Request/Response types ────────────────────────────────────────────────
 
 type GetMangaRequest struct{ Id string }
